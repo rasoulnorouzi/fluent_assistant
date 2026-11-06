@@ -120,6 +120,7 @@ object Llm {
         "gemini" -> {
             val err = data.optJSONObject("error")
             if (err != null) Chunk(error = err.optString("message", "Error ${err.optInt("code")}"))
+            else if (data.optJSONObject("promptFeedback")?.has("blockReason") == true) Chunk(stop = "blocked")
             else {
                 val c = data.optJSONArray("candidates")?.optJSONObject(0)
                 val text = buildString {
@@ -207,8 +208,9 @@ object Llm {
                     val chunk = parseChunk(provider.format, JSONObject(data))
                     if (chunk.error != null) return Outcome(sb.toString(), null, chunk.error)
                     if (chunk.text.isNotEmpty()) { sb.append(chunk.text); onText(chunk.text) }
-                    if (chunk.stop != null) stop = chunk.stop
-                    if (stop == "done") break
+                    // Claude sends max_tokens/refusal in message_delta, then message_stop ("done"): keep the first.
+                    if (chunk.stop != null && stop != "cut" && stop != "blocked") stop = chunk.stop
+                    if (chunk.stop == "done") break
                 }
             }
             if (call.cancelled) return Outcome(sb.toString(), "cancelled", null)
@@ -217,6 +219,12 @@ object Llm {
         } catch (e: IOException) {
             if (call.cancelled) return Outcome(sb.toString(), "cancelled", null)
             val msg = if (e is SocketTimeoutException) "The provider took too long. Try again." else "No connection."
+            return Outcome(sb.toString(), null, msg)
+        } catch (e: Exception) {
+            // Bad header value (odd character in a pasted key), non-JSON data line, ... Never crash the service.
+            if (call.cancelled) return Outcome(sb.toString(), "cancelled", null)
+            val msg = if (e is IllegalArgumentException) "The API key has an invalid character. Paste it again in Settings."
+                      else "Unexpected response from the provider."
             return Outcome(sb.toString(), null, msg)
         } finally {
             call.conn = null

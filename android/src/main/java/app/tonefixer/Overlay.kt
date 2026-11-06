@@ -218,6 +218,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
     private lateinit var title: TextView
     private lateinit var farsiTag: TextView
     private lateinit var body: TextView
+    private lateinit var bodyScroll: ScrollView
     private lateinit var status: TextView
     private lateinit var chips: LinearLayout
     private lateinit var apply: ImageButton
@@ -240,7 +241,10 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         setState(State.WORKING)
     }
 
-    fun append(piece: String) { text.append(piece); renderBody() }
+    fun append(piece: String) {
+        text.append(piece); renderBody()
+        bodyScroll.post { bodyScroll.fullScroll(View.FOCUS_DOWN) } // follow long answers
+    }
 
     /** Stream ended. [note] is shown under the text (e.g. cut off). */
     fun finish(note: String?) {
@@ -308,7 +312,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             textSize = 17f; setTextColor(p.ink); setLineSpacing(0f, 1.3f); setTextIsSelectable(false)
             minHeight = dp(56)
         }
-        val bodyScroll = object : ScrollView(ctx) {
+        bodyScroll = object : ScrollView(ctx) {
             override fun onMeasure(w: Int, h: Int) = super.onMeasure(w, MeasureSpec.makeMeasureSpec(maxBody, MeasureSpec.AT_MOST))
         }.apply { addView(body) }
         status = TextView(ctx).apply { textSize = 13f; visibility = View.GONE }
@@ -348,11 +352,23 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             setPadding(dp(12), dp(8), dp(12), dp(16)) // room for the shadow
             addView(col)
         }
-        val lp = params(-1, -2).apply { gravity = Gravity.TOP; y = dp(36) }
+        val lp = params(-1, -2).apply { gravity = Gravity.TOP; y = topInset() }
         runCatching { wm.addView(root, lp); card = root }
     }
 
     // ---------- shared ----------
+
+    /** Status bar / camera cutout height, so the card starts just below it (our windows are laid out in screen coordinates). */
+    private fun topInset(): Int {
+        val top = if (android.os.Build.VERSION.SDK_INT >= 30) {
+            wm.currentWindowMetrics.windowInsets.getInsets(
+                android.view.WindowInsets.Type.statusBars() or android.view.WindowInsets.Type.displayCutout()).top
+        } else {
+            val id = ctx.resources.getIdentifier("status_bar_height", "dimen", "android")
+            if (id > 0) ctx.resources.getDimensionPixelSize(id) else dp(24)
+        }
+        return top.coerceAtLeast(dp(24))
+    }
 
     private fun params(w: Int, h: Int) = WindowManager.LayoutParams(
         w, h,

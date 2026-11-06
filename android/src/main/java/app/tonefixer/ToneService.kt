@@ -47,7 +47,7 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
         }
     }
 
-    override fun onInterrupt() { call?.cancel() }
+    override fun onInterrupt() {} // no spoken feedback to stop; keep any running rewrite going
 
     override fun onDestroy() { call?.cancel(); if (::overlay.isInitialized) { overlay.closeCard(); overlay.hideBubble() }; super.onDestroy() }
 
@@ -63,6 +63,7 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
 
     override fun onCancel() {
         call?.cancel(); call = null
+        applying = false
         snap = null
         overlay.closeCard()
     }
@@ -102,6 +103,7 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
                 call = null
                 when {
                     out.error != null -> overlay.fail(out.error, settingsLink = "Settings" in out.error)
+                    out.text.isBlank() -> overlay.fail("No answer from the model. Try again or pick another tone.", settingsLink = false)
                     out.stop == "cut" -> overlay.finish("Cut off: the answer hit the length limit.")
                     else -> overlay.finish(null)
                 }
@@ -121,50 +123,74 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
 
     // ---------- apply ----------
 
+    private var applying = false
+
     override fun onApply() {
         val s = snap ?: return
-        if (result.isBlank()) return
+        if (result.isBlank() || applying) return
         val replacement = TextOps.keepOuterSpace(s.input, result.toString())
         val newFull = TextOps.splice(s.full, s.start, s.end, replacement)
         val cursor = s.start + replacement.length
         val n = s.node
-        n.refresh()
 
-        val ok = setText(n, newFull) || paste(n, s, replacement)
-        if (ok) {
-            n.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, Bundle().apply {
-                putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, cursor)
-                putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, cursor)
-            })
-            snap = null
-            overlay.closeCard()
-        } else {
-            copy(replacement)
-            overlay.fail("This app didn't accept the text. It's copied: long-press the field and Paste.", settingsLink = false)
+        // The field changed since the tap (kept typing, switched chat): never overwrite it.
+        if (!textIs(n, s.full)) {
+            giveUp(replacement, "The text changed since you tapped, so I didn't replace it. The result is copied: paste it where you want.")
+            return
         }
+        val accepted = n.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT } &&
+            n.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newFull)
+            })
+        if (accepted && textIs(n, newFull)) { done(n, cursor); return }
+        if (!accepted) { paste(n, s, replacement); return }
+
+        // Chrome/WebView, Flutter and Compose say yes but update their text a moment later: look again.
+        applying = true
+        main.postDelayed({
+            applying = false
+            if (snap !== s) return@postDelayed
+            when {
+                textIs(n, newFull) -> done(n, cursor)
+                textIs(n, s.full) -> paste(n, s, replacement) // really ignored: try paste on the untouched text
+                else -> giveUp(replacement, "Not sure the app took the text. It's copied: check the field, and paste if needed.")
+            }
+        }, 350)
     }
 
-    /** ACTION_SET_TEXT, then check the field really changed (some apps say yes and ignore it). */
-    private fun setText(n: AccessibilityNodeInfo, newFull: String): Boolean {
-        if (n.actionList.none { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }) return false
-        val done = n.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
-            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newFull)
+    private fun textIs(n: AccessibilityNodeInfo, t: String) = n.refresh() && n.text?.toString() == t
+
+    private fun done(n: AccessibilityNodeInfo, cursor: Int) {
+        n.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, Bundle().apply {
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, cursor)
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, cursor)
         })
-        n.refresh()
-        return done && n.text?.toString() == newFull
+        snap = null
+        overlay.closeCard()
     }
 
-    /** Fallback: select the original range and paste the result from the clipboard. */
-    private fun paste(n: AccessibilityNodeInfo, s: Snapshot, replacement: String): Boolean {
-        if (n.actionList.none { it.id == AccessibilityNodeInfo.ACTION_PASTE }) return false
+    private fun giveUp(replacement: String, message: String) {
+        copy(replacement)
+        overlay.fail(message, settingsLink = false)
+    }
+
+    /** Fallback for fields without a working SET_TEXT: select the original range and paste the result. */
+    private fun paste(n: AccessibilityNodeInfo, s: Snapshot, replacement: String) {
+        val msg = "This app didn't accept the text. It's copied: long-press the field and Paste."
+        if (n.actionList.none { it.id == AccessibilityNodeInfo.ACTION_PASTE }) { giveUp(replacement, msg); return }
         copy(replacement)
         n.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, Bundle().apply {
             putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, s.start)
             putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, s.end)
         })
-        val done = n.performAction(AccessibilityNodeInfo.ACTION_PASTE)
-        n.refresh()
-        return done && n.text?.toString()?.contains(replacement) == true
+        if (!n.performAction(AccessibilityNodeInfo.ACTION_PASTE)) { giveUp(replacement, msg); return }
+        applying = true
+        main.postDelayed({
+            applying = false
+            if (snap !== s) return@postDelayed
+            if (n.refresh() && n.text?.toString()?.contains(replacement.trim()) == true) done(n, s.start + replacement.length)
+            else giveUp(replacement, msg)
+        }, 350)
     }
 
     private fun copy(text: String) =

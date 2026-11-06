@@ -45,6 +45,7 @@ class SettingsActivity : Activity() {
                 if (Build.VERSION.SDK_INT >= 30) {
                     val b = ins.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime())
                     v.setPadding(b.left, b.top, b.right, b.bottom)
+                    v.post { v.findFocus()?.let { f -> f.requestRectangleOnScreen(android.graphics.Rect(0, 0, f.width, f.height)) } }
                 } else {
                     @Suppress("DEPRECATION")
                     v.setPadding(ins.systemWindowInsetLeft, ins.systemWindowInsetTop, ins.systemWindowInsetRight, ins.systemWindowInsetBottom)
@@ -64,7 +65,7 @@ class SettingsActivity : Activity() {
     private fun saveKey() {
         val f = keyField ?: return
         val pr = provider()
-        val typed = f.text.toString().trim()
+        val typed = Prefs.clean(f.text.toString())
         if (typed != (prefs.key(pr.id) ?: "")) prefs.setKey(pr.id, typed)
     }
 
@@ -120,7 +121,8 @@ class SettingsActivity : Activity() {
             setPadding(dp(4), dp(4), dp(4), dp(4))
             cfg.providers.values.forEach { o ->
                 addView(Ui.chip(context, p, o.label.substringAfter(' '), o.id == pr.id) {
-                    saveKey(); prefs.provider = o.id; customMode = false; testStatus = ""; build()
+                    saveKey(); keyField = null // the field holds the OLD provider's key
+                    prefs.provider = o.id; customMode = false; testStatus = ""; build()
                 }.apply { if (!isSelected) background = Ui.ripple(Ui.round(0, dp(20).toFloat()), 0x28000000) },
                     LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
             }

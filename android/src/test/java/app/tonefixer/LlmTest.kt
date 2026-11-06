@@ -177,6 +177,46 @@ class LlmTest {
         assertEquals("Model not found. Pick another in Settings.", out.error)
     }
 
+    // ---------- regressions from the device review ----------
+
+    private fun localClaude(base: String) = Llm.Provider("claude", "C", "claude", base, base,
+        "x-goog-api-key", emptyMap(), "", claude.models) // header name reused so serve() can check the key
+
+    @Test fun claudeCutOffSurvivesMessageStop() {
+        val sse = res("claude_ok.sse").replace("\"stop_reason\":\"end_turn\"", "\"stop_reason\":\"max_tokens\"")
+        serve(200, sse) { base ->
+            val out = Llm.stream(localClaude(base), "m", "test-key", JSONObject(), Llm.Call()) {}
+            assertEquals("cut", out.stop)
+            assertNull(out.error)
+        }
+    }
+
+    @Test fun claudeRefusalIsAnError() {
+        val sse = res("claude_ok.sse").replace("\"stop_reason\":\"end_turn\"", "\"stop_reason\":\"refusal\"")
+        serve(200, sse) { base ->
+            val out = Llm.stream(localClaude(base), "m", "test-key", JSONObject(), Llm.Call()) {}
+            assertEquals("The provider blocked this text.", out.error)
+        }
+    }
+
+    @Test fun geminiPromptBlocked() {
+        assertEquals("blocked", Llm.parseChunk("gemini", JSONObject("""{"promptFeedback":{"blockReason":"SAFETY"}}""")).stop)
+    }
+
+    @Test fun badKeyCharacterDoesNotCrash() {
+        val out = Llm.stream(localGemini("http://127.0.0.1:1"), "m", "abc\u0001def", JSONObject(), Llm.Call()) {}
+        assertTrue(out.error!!.isNotEmpty())
+    }
+
+    @Test fun garbageDataLineDoesNotCrash() = serve(200, "data: not json\n\n") { base ->
+        val out = Llm.stream(localGemini(base), "m", "test-key", JSONObject(), Llm.Call()) {}
+        assertEquals("Unexpected response from the provider.", out.error)
+    }
+
+    @Test fun keyCleaning() {
+        assertEquals("AIzaABC-123_x", Prefs.clean(" AIza​ABC-123_x \n"))
+    }
+
     /** Real API call through the real code. Runs only with GEMINI_KEY set (never in CI). */
     @Test fun liveGemini() {
         val key = System.getenv("GEMINI_KEY")

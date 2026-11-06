@@ -46,16 +46,19 @@ class Prefs(ctx: Context) {
     fun setKey(provider: String, key: String?) {
         cache.remove(provider)
         setKeyOk(provider, false)
-        val k = key?.trim().orEmpty()
+        val k = clean(key)
         if (k.isEmpty()) sp.edit().remove("key_$provider").apply()
         else sp.edit().putString("key_$provider", encrypt(k)).apply()
     }
 
-    private companion object {
-        const val ALIAS = "tonefixer-api-keys"
-        val cache = mutableMapOf<String, String>() // decrypted keys, process memory only
+    companion object {
+        /** Keys are plain ASCII; drop spaces, zero-width and other invisible characters picked up when pasting. */
+        fun clean(key: String?) = key.orEmpty().filter { it.code in 0x21..0x7E }
 
-        fun secretKey(): SecretKey {
+        private const val ALIAS = "tonefixer-api-keys"
+        private val cache = mutableMapOf<String, String>() // decrypted keys, process memory only
+
+        private fun secretKey(): SecretKey {
             val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
             (ks.getKey(ALIAS, null) as? SecretKey)?.let { return it }
             return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
@@ -67,12 +70,12 @@ class Prefs(ctx: Context) {
         }
 
         /** Returns base64(iv + ciphertext). */
-        fun encrypt(plain: String): String {
+        private fun encrypt(plain: String): String {
             val c = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, secretKey()) }
             return Base64.encodeToString(c.iv + c.doFinal(plain.toByteArray()), Base64.NO_WRAP)
         }
 
-        fun decrypt(enc: String): String {
+        private fun decrypt(enc: String): String {
             val all = Base64.decode(enc, Base64.NO_WRAP)
             val c = Cipher.getInstance("AES/GCM/NoPadding")
             c.init(Cipher.DECRYPT_MODE, secretKey(), GCMParameterSpec(128, all, 0, 12))
