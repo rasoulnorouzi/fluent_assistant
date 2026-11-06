@@ -72,9 +72,16 @@ Add action **Get Contents of URL**.
     | `model` | Text | `claude-haiku-5-5` |
     | `max_tokens` | Number | `1024` |
     | `system` | Text | *paste the whole "Tone Fixer instructions" below* |
-    | `thinking` | Dictionary | add one field: `type` (Text) = `disabled` |
-    | `output_config` | Dictionary | add one field: `effort` (Text) = `low` |
-    | `messages` | Array | add one item of type **Dictionary** with two fields: `role` (Text) = `user`, and `content` (Text) = tap and choose the **Text** variable from step 1b |
+    | `messages` | Array | see "How to fill `messages`" below |
+
+    **How to fill `messages`** (the only nested field):
+    1. **Add new field** → choose **Array** → type the key `messages`.
+    2. Tap the word **Array** on that row (or the arrow next to it): a new screen opens.
+    3. Tap **Add new item** → choose **Dictionary**. Tap that new **Dictionary** row: another screen opens.
+    4. **Add new field** → **Text** → key `role`, value `user`.
+    5. **Add new field** → **Text** → key `content`; tap its value and choose the blue **Text**
+       variable (from step 1b) in the bar above the keyboard.
+    6. Tap the back arrow (top left) twice to return.
 
 **Tone Fixer instructions** (copy everything inside the box into the `system` value):
 
@@ -109,7 +116,7 @@ Reply with the rewritten message only, without the <text> tags, quotes or commen
 
 Add these, in order:
 1. **Get Dictionary Value** → *Get **Value** for `content` in **Contents of URL***
-2. **Get Item from List** → *Get **First Item** from **Dictionary Value***
+2. **Get Item from List** → *Get **Last Item** from **Dictionary Value*** (the answer text is always the last item)
 3. **Get Dictionary Value** → *Get **Value** for `text` in **Item from List***
 4. **Copy to Clipboard** → **Dictionary Value**
 5. **Show Notification** → title `Copied: paste it`, body **Dictionary Value**
