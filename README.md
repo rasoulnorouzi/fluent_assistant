@@ -55,7 +55,8 @@ form), type, and a small sage bubble appears at its corner.
 
 **Using it:** click the bubble = rewrite with the current tone. Right-click or hold it = pick
 another tone. The result appears in a card; ✓ replaces your text (Ctrl+Z undoes it), ✕ or Esc
-cancels. If you select part of the text first, only that part is rewritten. In Gmail, your
+cancels. If you select part of the text first, only that part is rewritten. To keep the bubble away from a site, right-click it → **Hide on this site** (bring it back in
+the extension's settings → Hidden on these sites). In Gmail, your
 signature and the quoted mail are left alone. Keyboard: **Alt+Shift+F** rewrites, press it again
 to replace (change it at `chrome://extensions/shortcuts`).
 

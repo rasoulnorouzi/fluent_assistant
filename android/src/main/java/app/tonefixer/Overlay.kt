@@ -56,12 +56,17 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
     private val win = dp(56)           // its window: room for the badge to stick out
     private val margin = dp(6)         // gap to the screen edge
 
-    private val circle = View(ctx)
+    /** Idle bubble: a little faded so it doesn't cover text, but always clearly visible. */
+    private val IDLE_ALPHA = 0.85f
+
+    private val circle = View(ctx).apply { elevation = dp(3).toFloat() } // soft shadow: visible on any background
     private val wave = ImageView(ctx).apply {
+        elevation = dp(3).toFloat() // same layer as the circle, so the wave stays on top
         setImageResource(R.drawable.ic_wave); scaleType = ImageView.ScaleType.FIT_CENTER
         setPadding(dp(11), dp(11), dp(11), dp(11))
     }
     private val badge = TextView(ctx).apply {
+        elevation = dp(4).toFloat()
         textSize = 10f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
         setTextColor(p.cream); background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(p.clayDeep) }
     }
@@ -123,7 +128,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                 State.ERROR -> setColor(p.clayDeep)
             }
         }
-        bubble.alpha = if (s == State.IDLE && !cardShown) 0.6f else 1f
+        bubble.alpha = if (s == State.IDLE && !cardShown) IDLE_ALPHA else 1f
         badge.visibility = if (s == State.WORKING) View.GONE else View.VISIBLE
         if (s == State.WORKING) pulse = ObjectAnimator.ofFloat(wave, View.ALPHA, 1f, 0.35f).apply {
             duration = 550; repeatMode = ValueAnimator.REVERSE; repeatCount = ValueAnimator.INFINITE; start()
@@ -213,7 +218,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     main.removeCallbacks(longPress)
-                    if (!cardShown) bubble.alpha = 0.6f
+                    if (!cardShown) bubble.alpha = IDLE_ALPHA
                     when {
                         dragging && armed && e.actionMasked == MotionEvent.ACTION_UP -> { hideTarget(); cb.onDismiss() }
                         dragging -> { hideTarget(); snapToSide(e.rawX) }

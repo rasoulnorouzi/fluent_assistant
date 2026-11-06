@@ -72,8 +72,32 @@
     if (s) { tones = s.tones; tone = s.tone; ui && setLetter(); }
   }
   try {
-    chrome.storage.onChanged.addListener((c) => { if (c.tone) { tone = c.tone.newValue; ui && setLetter(); } });
+    chrome.storage.onChanged.addListener((c) => {
+      if (c.tone) { tone = c.tone.newValue; ui && setLetter(); }
+      if (c.hiddenSites) { hiddenHere = (c.hiddenSites.newValue || []).includes(SITE); schedule(); }
+    });
   } catch { /* old script after a reload */ }
+
+  // ---------- "Hide on this site" ----------
+
+  /** The site the user sees in the address bar (also inside its iframes, e.g. editors). */
+  const SITE = (() => {
+    try { const a = location.ancestorOrigins; return new URL(a && a.length ? a[a.length - 1] : location.href).hostname; }
+    catch { return location.hostname; }
+  })();
+  let hiddenHere = false;
+  try { chrome.storage.local.get({ hiddenSites: [] }).then((s) => { hiddenHere = s.hiddenSites.includes(SITE); schedule(); }); }
+  catch { /* old script after a reload */ }
+
+  async function hideOnThisSite() {
+    hiddenHere = true;
+    cancel();
+    if (ui) ui.bubble.hidden = true;
+    try {
+      const { hiddenSites } = await chrome.storage.local.get({ hiddenSites: [] });
+      await chrome.storage.local.set({ hiddenSites: [...new Set([...hiddenSites, SITE])] });
+    } catch { /* old script after a reload */ }
+  }
 
   // ---------- UI ----------
 
@@ -91,7 +115,7 @@
   button:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
 
   .bubble { position: fixed; width: 34px; height: 34px; border-radius: 50%; background: var(--sage); color: #FBF8F1;
-            display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.22); opacity: .72;
+            display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.22); opacity: .85; /* faded, never faint */
             transition: opacity .15s, transform .15s; touch-action: none; }
   .bubble:hover, .bubble.on { opacity: 1; }
   .bubble:active { transform: scale(.94); }
@@ -114,6 +138,9 @@
   .letter { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 700 12px/1 system-ui, sans-serif;
             background: var(--bg); color: var(--primary); flex: none; }
   .row.sel .letter { background: var(--on-primary); color: var(--primary); }
+  .sep { height: 1px; background: var(--line); margin: 6px 8px; }
+  .row.off { color: var(--muted); }
+  .row.off .letter { background: transparent; color: var(--muted); }
 
   .card { position: fixed; border-radius: 22px; background: var(--card); padding: 8px 10px 12px 16px;
           box-shadow: 0 12px 36px rgba(0,0,0,.22), 0 0 0 1px color-mix(in srgb, var(--line) 50%, transparent); }
@@ -202,7 +229,7 @@
   const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; place(); }); };
 
   function shouldShow() {
-    return field && field.isConnected && (cardOpen() || currentText(field).trim() !== "");
+    return field && field.isConnected && (cardOpen() || (!hiddenHere && currentText(field).trim() !== ""));
   }
 
   function place() {
@@ -300,6 +327,9 @@
         run(t.id, !(snap && cardOpen()));
       } }, h("span", { class: "letter" }, t.letter), h("span", {}, t.label)));
     }
+    m.append(h("div", { class: "sep" }),
+      h("button", { class: "row off", role: "menuitem", title: "Bring it back in Tone Fixer settings", onclick: () => { hideMenu(); hideOnThisSite(); } },
+        h("span", { class: "letter" }, icon(CLOSE, 14)), h("span", {}, "Hide on this site")));
     m.hidden = false;
     placeMenu();
   }

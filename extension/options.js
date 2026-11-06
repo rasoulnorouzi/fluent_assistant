@@ -8,7 +8,7 @@ const cfg = chooseConfig({ tones: bundledTones, providers: bundledProviders }, (
 const tonesCfg = cfg.tones, providersCfg = cfg.providers;
 const providers = providersCfg.providers;
 
-let s = await chrome.storage.local.get({ provider: null, tone: null, models: {}, modelLists: {}, keys: {}, keyOk: {} });
+let s = await chrome.storage.local.get({ provider: null, tone: null, models: {}, modelLists: {}, keys: {}, keyOk: {}, hiddenSites: [] });
 let editModels = false;
 let testMsg = null; // {text, ok}
 
@@ -56,6 +56,11 @@ function render() {
   const st = $("testStatus");
   st.hidden = !testMsg;
   if (testMsg) { st.textContent = testMsg.text; st.className = `status ${testMsg.ok ? "ok" : "err"}`; }
+
+  const hidden = s.hiddenSites || [];
+  $("hiddenList").replaceChildren(...hidden.map((site) =>
+    chip(`${site}  · Show again`, false, () => save({ hiddenSites: hidden.filter((x) => x !== site) }).then(render))));
+  $("hiddenNone").hidden = hidden.length > 0;
 
   $("tones").replaceChildren(...tonesCfg.tones.map((t) => chip(t.label, t.id === toneId(), () => save({ tone: t.id }).then(render))));
 }

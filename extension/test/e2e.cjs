@@ -233,6 +233,24 @@ function mockServer() {
     await sw.evaluate(() => chrome.storage.local.set({ keys: { gemini: "test-key" } }));
   });
 
+  await check("Hide on this site → gone here; settings → Show again → back", async () => {
+    await page.click("#ta");
+    await bubble.click({ button: "right" });
+    await ui.locator(".row.off").click();
+    await page.click("#ta"); await page.keyboard.type(" x");
+    await page.waitForTimeout(300);
+    assert.equal(await bubble.isVisible(), false);
+    assert.deepEqual(await sw.evaluate(() => chrome.storage.local.get("hiddenSites").then((s) => s.hiddenSites)), ["127.0.0.1"]);
+    const o = await ctx.newPage();
+    await o.goto(`chrome-extension://${extId}/options.html`);
+    await o.locator("#hiddenList .chip", { hasText: "127.0.0.1" }).click();
+    assert.equal(await o.locator("#hiddenList .chip").count(), 0);
+    await o.close();
+    await page.bringToFront();
+    await page.click("#ta"); await page.keyboard.type("y");
+    await bubble.waitFor({ state: "visible" });
+  });
+
   await check("dark mode card", async () => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.evaluate(() => { document.body.style.background = "#111"; });

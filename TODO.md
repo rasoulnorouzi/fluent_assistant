@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 2b (quality): 6/6 (100%) · Phase 2c (off switch): 3/4 · Phase 3: 0/7**
-**Current step:** O.4, extension "Hide on this site". Then you install and check everything (U.5, 2.10, 1.16).
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 2b (quality): 6/6 (100%) · Phase 2c (off switch): 4/4 (100%) · Phase 3: 0/7**
+**Current step:** your install and check: Android (uninstall old test app → install → update in-app), extension 0.2.0 by hand then 0.2.2 via NEW, before/after page. Open: U.5, 2.10, 1.16.
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -65,8 +65,8 @@
 ## Phase 2c: Turn off, uninstall, smaller bubble (approved 2026-11-06)
 - [x] O.1 Android: drag the bubble → ✕ appears at the bottom; drop on ✕ = bubble off everywhere; elsewhere = snaps to the nearest side
 - [x] O.2 Android: opening the Tone Fixer app turns the bubble back on; Uninstall button in Settings
-- [x] O.3 Android: bubble 56 → 48 dp (smaller badge too); tests + screenshots; publish 0.2.16
-- [ ] O.4 Extension: "Hide on this site" in the bubble menu; hidden sites listed in settings with "Show again"; publish 0.2.2
+- [x] O.3 Android: bubble 56 → 48 dp (smaller badge too), idle 85% opacity + soft shadow (you: "faded but visible"); tests + screenshots; published 0.2.16 → 0.2.17
+- [x] O.4 Extension: "Hide on this site" in the bubble menu; hidden sites listed in settings with "Show again"; publish 0.2.2
 
 ## Phase 3: iOS (planned)
 - [ ] 3.1 `ios/SHORTCUT.md`: Back Tap shortcut, step by step (interim solution)

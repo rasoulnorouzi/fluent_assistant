@@ -47,6 +47,7 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-05 Speed is the top priority (direct API calls, streaming, pre-warm, thinking off, short fixed prompt).
 - 2026-11-05 Wants a hand-made, non-generic look ("no AI slop") for the UI and logo.
 - 2026-11-05 Wants step-by-step visibility: always say which TODO step we're on.
+- 2026-11-06 Preference: the idle bubble must be "a bit faded like a ghost button but visible" → idle opacity 85% (was 60% Android / 72% extension), full on touch/hover/working; Android bubble has a 3 dp elevation shadow.
 
 ## Problems & fixes
 - 2026-11-05 Cloud session can't reach ai.google.dev directly (network policy); Gemini facts were taken from web search results of Google's docs instead.
