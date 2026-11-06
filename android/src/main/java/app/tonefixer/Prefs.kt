@@ -41,7 +41,13 @@ class Prefs(ctx: Context) {
         get() = sp.getInt("bubbleY", -1)
         set(v) = sp.edit().putInt("bubbleY", v).apply()
 
-    /** When Settings last looked for an update (ms), so the automatic check runs at most once a day. */
+    /** Set while the user is off allowing "Install unknown apps"; the update continues when they come back,
+     *  even if Android restarted the app in between. */
+    var updateAfterAllow: Boolean
+        get() = sp.getBoolean("updateAfterAllow", false)
+        set(v) = sp.edit().putBoolean("updateAfterAllow", v).apply()
+
+    /** When Settings last looked for an update (ms), so the automatic check doesn't run on every open. */
     var lastUpdateCheck: Long
         get() = sp.getLong("lastUpdateCheck", 0)
         set(v) = sp.edit().putLong("lastUpdateCheck", v).apply()

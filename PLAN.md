@@ -265,7 +265,7 @@ android/
 
 - **Where**: a small "About & updates" section at the bottom of Settings: version number,
   "Check for updates" button, and the result ("You're up to date" / "Version 0.2.14 is ready ·
-  Update"). Settings also checks by itself when you open it (at most once a day), so you see a
+  Update"). Settings also checks by itself when you open it (at most every 6 hours), so you see a
   new version without pressing anything.
 - **Source**: one small file, `latest.json`, plus the APK, on a dedicated `updates` branch of
   this repo, read from `raw.githubusercontent.com` (the repo is public, so no token). Its content:

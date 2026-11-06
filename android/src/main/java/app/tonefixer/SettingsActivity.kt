@@ -35,15 +35,21 @@ class SettingsActivity : Activity() {
     // never rebuilds the screen under the user's fingers.
     private var aboutBox: LinearLayout? = null
     internal var updInfo: Update.Info? = null // internal: set by the screenshot test
-    internal var updStatus = ""
+    internal var updStatus = "" // internal: read by tests
     private var updError = false
     private var updBusy = false
-    private var installWhenAllowed = false
+    /** Android's installer reports here (see Update.install). */
+    private val installStatus = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: android.content.Context, i: Intent) = handleInstallStatus(i)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
         cfg = Llm.config(this)
+        val filter = android.content.IntentFilter(Update.ACTION_STATUS)
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(installStatus, filter, RECEIVER_NOT_EXPORTED)
+        else @Suppress("UnspecifiedRegisterReceiverFlag") registerReceiver(installStatus, filter)
         p = Ui.palette(this)
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -72,14 +78,15 @@ class SettingsActivity : Activity() {
         // Opening the app brings the bubble back after it was dropped on ✕.
         if (!prefs.bubbleOn) { prefs.bubbleOn = true; bubbleBack = true }
         build()
-        if (installWhenAllowed && packageManager.canRequestPackageInstalls()) { installWhenAllowed = false; startUpdate() }
-        else if (System.currentTimeMillis() - prefs.lastUpdateCheck > 20 * 3600_000L) checkUpdate(manual = false)
+        if (prefs.updateAfterAllow && packageManager.canRequestPackageInstalls()) {
+            prefs.updateAfterAllow = false // back from "Install unknown apps": carry on
+            if (updInfo != null) startUpdate() else checkUpdate(manual = true, thenInstall = true)
+        } else if (System.currentTimeMillis() - prefs.lastUpdateCheck > 6 * 3600_000L) checkUpdate(manual = false)
     }
 
-    /** Android's installer reports back here (see Update.install). */
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        if (intent.action != Update.ACTION_STATUS) return
+    override fun onDestroy() { runCatching { unregisterReceiver(installStatus) }; super.onDestroy() }
+
+    private fun handleInstallStatus(intent: Intent) {
         when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 @Suppress("DEPRECATION") val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
@@ -285,7 +292,7 @@ class SettingsActivity : Activity() {
         })
     }
 
-    private fun checkUpdate(manual: Boolean) {
+    private fun checkUpdate(manual: Boolean, thenInstall: Boolean = false) {
         if (updBusy) return
         updBusy = true; if (manual) setUpd("Checking…"); renderUpdate()
         thread {
@@ -296,8 +303,10 @@ class SettingsActivity : Activity() {
                 r.onSuccess { info ->
                     prefs.lastUpdateCheck = System.currentTimeMillis()
                     updInfo = info
-                    if (info.versionCode > Update.installedCode(this)) setUpd("Version ${info.versionName} is ready.")
-                    else if (manual) setUpd("You have the latest version.") else setUpd("")
+                    if (info.versionCode > Update.installedCode(this)) {
+                        setUpd("Version ${info.versionName} is ready.")
+                        if (thenInstall) { renderUpdate(); startUpdate(); return@runOnUiThread }
+                    } else if (manual) setUpd("You have the latest version (${Update.installedName(this)}).") else setUpd("")
                 }.onFailure { if (manual) setUpd("Couldn't check for updates. Check your connection and try again.", error = true) }
                 renderUpdate()
             }
@@ -309,8 +318,8 @@ class SettingsActivity : Activity() {
         if (updBusy) return
         if (!packageManager.canRequestPackageInstalls()) {
             // One-time switch: Settings → "Install unknown apps" → Tone Fixer. onResume continues.
-            installWhenAllowed = true
-            setUpd("Allow \"Install unknown apps\" for Tone Fixer, then come back.")
+            prefs.updateAfterAllow = true
+            setUpd("Allow \"Install unknown apps\" for Tone Fixer, then come back: the update continues by itself.")
             renderUpdate()
             open(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
             return

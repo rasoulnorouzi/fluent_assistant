@@ -81,8 +81,8 @@ object Update {
     }
 
     /**
-     * Hands the APK to Android's installer. The result comes back to SettingsActivity.onNewIntent
-     * (action [ACTION_STATUS]): first "needs user action" with the system's confirm screen to show.
+     * Hands the APK to Android's installer. The result comes back as a broadcast (action
+     * [ACTION_STATUS]) to SettingsActivity: first "needs user action" with the system's confirm screen.
      */
     fun install(ctx: Context, apk: File) {
         val installer = ctx.packageManager.packageInstaller
@@ -93,9 +93,10 @@ object Update {
         val id = installer.createSession(params)
         installer.openSession(id).use { s ->
             s.openWrite("base.apk", 0, apk.length()).use { o -> apk.inputStream().use { it.copyTo(o) }; s.fsync(o) }
-            val status = Intent(ctx, SettingsActivity::class.java).setAction(ACTION_STATUS)
-                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            val pi = PendingIntent.getActivity(ctx, id, status, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+            // A broadcast to our own receiver (SettingsActivity), not an activity start: Android 14+
+            // can block activity starts from PendingIntents, which would leave "Installing…" hanging.
+            val status = Intent(ACTION_STATUS).setPackage(ctx.packageName)
+            val pi = PendingIntent.getBroadcast(ctx, id, status, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
             s.commit(pi.intentSender)
         }
     }

@@ -1,5 +1,6 @@
 package app.tonefixer
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
@@ -107,6 +108,22 @@ class ScreenshotTest {
         val prefs = Prefs(app()).apply { bubbleOn = false; lastUpdateCheck = System.currentTimeMillis() }
         Robolectric.buildActivity(SettingsActivity::class.java).setup()
         org.junit.Assert.assertTrue(prefs.bubbleOn)
+    }
+
+    @Test fun installerAnswersReachSettings() {
+        Prefs(app()).lastUpdateCheck = System.currentTimeMillis()
+        val activity = Robolectric.buildActivity(SettingsActivity::class.java).setup().get()
+        val status = { code: Int -> Intent(Update.ACTION_STATUS).setPackage(app().packageName)
+            .putExtra(android.content.pm.PackageInstaller.EXTRA_STATUS, code) }
+        // 1) "Needs the user's OK": the system's confirm screen is opened.
+        app().sendBroadcast(status(android.content.pm.PackageInstaller.STATUS_PENDING_USER_ACTION)
+            .putExtra(Intent.EXTRA_INTENT, Intent("test.CONFIRM_INSTALL")))
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+        org.junit.Assert.assertEquals("test.CONFIRM_INSTALL", org.robolectric.Shadows.shadowOf(activity).nextStartedActivity?.action)
+        // 2) The user said no.
+        app().sendBroadcast(status(android.content.pm.PackageInstaller.STATUS_FAILURE_ABORTED))
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+        org.junit.Assert.assertEquals("Update cancelled.", activity.updStatus)
     }
 
     @Test fun launcherIcon() {
