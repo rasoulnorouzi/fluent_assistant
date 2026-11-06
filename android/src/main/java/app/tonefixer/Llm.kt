@@ -164,6 +164,9 @@ object Llm {
             status == 400 -> "The provider rejected the request" + (detail?.let { ": $it" } ?: ".")
             status == 401 || status == 403 -> "API key not accepted. Check it in Settings."
             status == 404 -> "Model not found. Pick another in Settings."
+            // Free keys: e.g. 500 requests per day per model. Another model has its own quota.
+            status == 429 && body != null && Regex("per ?day", RegexOption.IGNORE_CASE).containsMatchIn(body) ->
+                "Daily free limit reached for this model. Pick another model in Settings, or try again tomorrow."
             status == 429 -> "Too many requests or quota used up. Try again in a moment."
             status >= 500 -> "The provider is having trouble. Try again."
             else -> "Request failed ($status)" + (detail?.let { ": $it" } ?: ".")

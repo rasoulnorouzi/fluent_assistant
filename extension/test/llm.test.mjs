@@ -96,6 +96,8 @@ test("error messages", () => {
   assert.equal(llm.errorMessage(400, '{"error":{"message":"bad thing"}}'), "The provider rejected the request: bad thing");
   assert.equal(llm.errorMessage(400, "not json"), "The provider rejected the request.");
   assert.equal(llm.errorMessage(529, null), "The provider is having trouble. Try again.");
+  assert.equal(llm.errorMessage(429, '{"error":{"code":429,"message":"You exceeded your current quota. * Quota exceeded for metric: generate_content_free_tier_requests, limit: 500, description: Generate content requests per day limit exceeded on Free Tier."}}'), "Daily free limit reached for this model. Pick another model in Settings, or try again tomorrow.");
+  assert.equal(llm.errorMessage(429, '{"error":{"message":"Resource exhausted"}}'), "Too many requests or quota used up. Try again in a moment.");
 });
 
 test("text helpers", () => {

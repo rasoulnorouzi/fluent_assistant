@@ -88,6 +88,7 @@ Show the user one short message for each:
 | 400 | "The provider rejected the request" + provider message (often a bad model setting) |
 | 401 / 403 | "API key not accepted. Check it in Settings." |
 | 404 | "Model not found. Pick another in Settings." |
+| 429, body mentions "per day" | "Daily free limit reached for this model. Pick another model in Settings, or try again tomorrow." (free Gemini keys: 500 requests/day per model; each model has its own quota) |
 | 429 | "Too many requests or quota used up. Try again in a moment." |
 | 5xx / 529 | "The provider is having trouble. Try again." |
 | network | "No connection." |

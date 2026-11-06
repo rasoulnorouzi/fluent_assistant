@@ -98,6 +98,7 @@ export function errorMessage(status, body) {
   if (status === 400) return "The provider rejected the request" + tail;
   if (status === 401 || status === 403) return "API key not accepted. Check it in Settings.";
   if (status === 404) return "Model not found. Pick another in Settings.";
+  if (status === 429 && /per ?day/i.test(body || "")) return "Daily free limit reached for this model. Pick another model in Settings, or try again tomorrow.";
   if (status === 429) return "Too many requests or quota used up. Try again in a moment.";
   if (status >= 500) return "The provider is having trouble. Try again.";
   return `Request failed (${status})` + tail;
