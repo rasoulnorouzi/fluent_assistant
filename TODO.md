@@ -1,7 +1,7 @@
 # TODO
 
 **Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 2b (quality): 6/6 · Phase 2c (off switch): 4/4 · Phase 2d (model choice): 3/3 (100%) · Phase 3: 0/7**
-**Current step:** your install and check (U.5, 2.10, 1.16): Android 0.2.18, extension 0.2.3, the before/after tone page.
+**Current step:** you're on Android 0.2.19 (installed by hand). Next version = first in-app update (U.5). Still open: extension on real sites (2.10), phone test (1.16).
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -40,7 +40,7 @@
 - [x] U.2 `Update.kt`: read `latest.json`, compare versions, download, SHA-256 check, PackageInstaller
 - [x] U.3 "About & updates" section in Settings (version, Check button, auto-check once a day)
 - [x] U.4 `updates` branch with `latest.json` + APK; `publish-update.sh` to push a new version
-- [ ] U.5 Unit tests + screenshot; publish a 2nd version and update to it (you, on the phone)
+- [ ] U.5 Unit tests + screenshot; publish a 2nd version and update to it (you, on the phone). 0.2.19 was installed by hand; the next published version is the first real in-app update
 
 ## Phase 2: Browser extension (Chrome, PLAN.md §5, waiting for approval)
 - [x] 2.1 `extension/` scaffold: MV3 manifest, icons, `pack.sh` (copies shared JSON, makes the zip)
