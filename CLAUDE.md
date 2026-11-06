@@ -44,6 +44,9 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Live test (gemini-3.5-flash-lite, thinkingLevel minimal): first text in ~0.9–1.5 s from the cloud box without pre-warm; Farsi, Finglish, questions and an "ignore your instructions" message were all rewritten correctly by the fixed prompt.
 - 2026-11-06 Gemini SSE lines end with \r\n; each `data:` JSON has candidates[0].content.parts[].text; the last chunk has finishReason STOP (or MAX_TOKENS) and an empty text part with a thoughtSignature. HTTP errors (e.g. 404) come back as a plain JSON body `{error:{code,message,status}}`, not SSE.
 - 2026-11-05 Gemini 3.x uses `thinkingConfig.thinkingLevel` ("minimal" is the lowest; 3.5 Flash-Lite defaults to minimal); 2.5 uses `thinkingBudget: 0`. Never send both (400).
+- 2026-11-06 Llm.kt passes 18 JVM unit tests (fixtures = real recorded Gemini streams + hand-written Claude streams) and a live test (`GEMINI_KEY=... ./gradlew testDebugUnitTest --tests '*liveGemini*'`), which is skipped when no key is set.
+- 2026-11-06 Latency measurement (JDK HttpURLConnection): first connection's setup ≈ 470 ms; reused connection ≈ 0 ms (so pre-warm is worth it). Gemini's own time-to-first-token varies a lot per request (0.5–3.3 s), and that's server-side.
+- 2026-11-06 Gotcha: writing `shared/*.json` inside a Kotlin KDoc opens a nested comment (`/*`) → "Unclosed comment" compile error. Avoid `/*` in comments.
 
 ## Open questions
 - 2026-11-05 "Daily" = neutral natural everyday English? (Default taken 2026-11-06; user can still change it.)

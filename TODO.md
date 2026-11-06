@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 2/16 (13%) · Phase 2: 0/8 · Phase 3: 0/7**
-**Current step:** 1.4/1.5, `Llm.kt` (1.2 waits on you: GitHub didn't start the CI job, see the run page)
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 4/16 (25%) · Phase 2: 0/8 · Phase 3: 0/7**
+**Current step:** 1.6, `Prefs.kt` (1.2 waits on you: GitHub didn't start the CI job, see the run page)
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -15,8 +15,8 @@
 - [x] 1.1 Gradle project skeleton (`android/`), empty Settings screen, builds locally with the wrapper
 - [ ] 1.2 GitHub Actions workflow: unit tests + APK build (unsigned at first) goes green. **Blocked:** workflow pushed, but GitHub didn't assign a runner (billing/Actions setting?)
 - [x] 1.3 `shared/tones.json`, `shared/providers.json`, `shared/API.md`, copied into assets by Gradle
-- [ ] 1.4 `Llm.kt`: config loading, request builders, `extra` merge, max_tokens, plus unit tests
-- [ ] 1.5 `Llm.kt`: SSE streaming for Gemini + Claude, error mapping, plus unit tests with sample streams
+- [x] 1.4 `Llm.kt`: config loading, request builders, `extra` merge, max_tokens, plus unit tests
+- [x] 1.5 `Llm.kt`: SSE streaming for Gemini + Claude, error mapping, plus unit tests with sample streams
 - [ ] 1.6 `Prefs.kt`: settings + Keystore AES-GCM encryption of API keys
 - [ ] 1.7 `SettingsActivity`: provider, model (+ custom id), keys, default tone, **Test key** button
 - [ ] 1.8 Setup checklist in Settings (restricted settings, accessibility, battery/autostart) with deep links
