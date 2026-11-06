@@ -1,7 +1,7 @@
 # TODO
 
 **Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 2: 0/8 · Phase 3: 0/7**
-**Current step:** 1.16, on-device test by you with the test APK sent in chat (CI still blocked, see 1.2) (1.2 waits on you: GitHub didn't start the CI job, see the run page)
+**Current step:** 1.16, on-device test by you with the test APK sent in chat (the emulator here couldn't run the full flow: no hardware acceleration). 1.2 waits on you: GitHub didn't start the CI job, see the run page.
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
