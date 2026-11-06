@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 2b (quality): 5/6 · Phase 3: 0/7**
-**Current step:** Q.6, publish Android 0.2.14 + extension 0.2.0 and a before/after page for your check. Waiting on you: install Android 0.2.13 (U.5), extension on real sites (2.10), phone test (1.16).
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 2b (quality): 6/6 (100%) · Phase 3: 0/7**
+**Current step:** your final check: the before/after page, then install Android (uninstall the old test app first) and update it in-app; extension 0.2.0 by hand once, then 0.2.1 via its NEW notice. Still open: U.5, 2.10, 1.16.
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -60,7 +60,7 @@
 - [x] Q.3 `shared/eval/`: the repeatable tone check (test messages + script), for future tuning
 - [x] Q.4 Models: add, remove, restore defaults (Android Settings + extension options)
 - [x] Q.5 Extension updates (option B): newer tones/models arrive by themselves; "new version" notice + publish script
-- [ ] Q.6 Publish Android 0.2.14 (through the in-app update) + extension 0.2.0; before/after page for your check (published; page in progress)
+- [x] Q.6 Published Android 0.2.14 → 0.2.15 and extension 0.2.0 → 0.2.1 (clear daily-limit message); before/after page: https://claude.ai/artifact/BpSteL6eBZnfzZNEwidmh8
 
 ## Phase 3: iOS (planned)
 - [ ] 3.1 `ios/SHORTCUT.md`: Back Tap shortcut, step by step (interim solution)
