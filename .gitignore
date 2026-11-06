@@ -1,0 +1,22 @@
+# Build output
+.gradle/
+build/
+android/.gradle/
+android/build/
+local.properties
+*.apk
+*.aab
+# Secrets (never commit)
+*.jks
+*.keystore
+*.key
+keystore.properties
+# IDE
+.idea/
+*.iml
+.DS_Store
+# Extension: copies made by extension/pack.sh (shared/ is the source)
+extension/tones.json
+extension/providers.json
+extension/fraunces_title.ttf
+extension/build/

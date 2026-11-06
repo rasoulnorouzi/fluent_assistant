@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The bubble glyph: the logo's soft wave. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="30dp" android:height="30dp" android:viewportWidth="40" android:viewportHeight="40">
+    <path android:strokeColor="#FBF8F1" android:strokeWidth="4.5" android:strokeLineCap="round"
+        android:pathData="M7,21c4,-7 9,-7 13,0s9,7 13,0" />
+</vector>

@@ -1,0 +1,8 @@
+data: {"candidates": [{"content": {"parts": [{"text": "Dear Mr"}],"role": "model"},"index": 0}],"usageMetadata": {"promptTokenCount": 164,"candidatesTokenCount": 2,"totalTokenCount": 166,"promptTokensDetails": [{"modality": "TEXT","tokenCount": 164}],"serviceTier": "standard"},"modelVersion": "gemini-3.1-flash-lite","responseId": "3Rntas3AMIHZytMPksi00AI"}
+
+data: {"candidates": [{"content": {"parts": [{"text": ". Ahmadi,\n\nPlease accept my apologies for the delay. I will send the report"}],"role": "model"},"index": 0}],"usageMetadata": {"promptTokenCount": 164,"candidatesTokenCount": 20,"totalTokenCount": 184,"promptTokensDetails": [{"modality": "TEXT","tokenCount": 164}],"serviceTier": "standard"},"modelVersion": "gemini-3.1-flash-lite","responseId": "3Rntas3AMIHZytMPksi00AI"}
+
+data: {"candidates": [{"content": {"parts": [{"text": " to you by Friday.\n\nBest regards,"}],"role": "model"},"index": 0}],"usageMetadata": {"promptTokenCount": 164,"candidatesTokenCount": 29,"totalTokenCount": 193,"promptTokensDetails": [{"modality": "TEXT","tokenCount": 164}],"serviceTier": "standard"},"modelVersion": "gemini-3.1-flash-lite","responseId": "3Rntas3AMIHZytMPksi00AI"}
+
+data: {"candidates": [{"content": {"parts": [{"text": "","thoughtSignature": "EnMKcQFpFH0Tqnd6ynavju7uTyJXEpLUoMlXAbaSebr9QMv1NCnhJS9srH4GgD3vyvITJGnhieroPeuRQeKXC8dfv2EC1UcPilaMf+BTxScPMsF1JoxylxFCeXv2XfHfq2K/neshEZGL8Y/qoYkbVFwDcI0V"}],"role": "model"},"finishReason": "STOP","index": 0}],"usageMetadata": {"promptTokenCount": 164,"candidatesTokenCount": 29,"totalTokenCount": 193,"promptTokensDetails": [{"modality": "TEXT","tokenCount": 164}],"serviceTier": "standard"},"modelVersion": "gemini-3.1-flash-lite","responseId": "3Rntas3AMIHZytMPksi00AI"}
+

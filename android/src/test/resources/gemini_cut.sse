@@ -1,0 +1,4 @@
+data: {"candidates": [{"content": {"parts": [{"text": "Dear Mr. Ahmadi, I will"}],"role": "model"},"index": 0}]}
+
+data: {"candidates": [{"content": {"parts": [{"text": " send"}],"role": "model"},"finishReason": "MAX_TOKENS","index": 0}]}
+

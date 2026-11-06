@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_description">Shows a small bubble when you type. Tapping it reads the text in that field, sends it to the AI provider you chose in Tone Fixer (Gemini or Claude) with your own API key, and replaces it with the corrected or translated version after you confirm. Nothing is read or sent unless you tap the bubble.</string>
+</resources>
