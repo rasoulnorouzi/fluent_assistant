@@ -25,6 +25,59 @@ class ScreenshotTest {
     @Config(qualifiers = "+night")
     @Test fun settingsDark() = shoot("settings-dark")
 
+    // ---------- overlay ----------
+
+    private fun overlay(): Overlay {
+        val ctx = org.robolectric.RuntimeEnvironment.getApplication()
+        val cfg = Llm.config(ctx)
+        val prefs = Prefs(ctx).apply { tone = "friendly" }
+        return Overlay(ctx, prefs, object : Overlay.Callbacks {
+            override fun onTap() {}
+            override fun onPickTone(id: String) {}
+            override fun onApply() {}
+            override fun onCancel() {}
+            override fun onOpenSettings() {}
+        }).apply { setTones(cfg.tones) }
+    }
+
+    @Test fun cardStreaming() = overlay().run {
+        startCard("friendly", fromFarsi = true)
+        append("Hi Sara! I'm really sorry, but I can't make it tomorrow. I'm not")
+        save(cardView()!!, "card-streaming")
+    }
+
+    @Test fun cardDone() = overlay().run {
+        startCard("formal", fromFarsi = false)
+        append("Dear Mr. Ahmadi,\n\nPlease accept my apologies for the delay. I will send the report to you by Friday.\n\nBest regards,")
+        finish(null)
+        save(cardView()!!, "card-done")
+    }
+
+    @Config(qualifiers = "+night")
+    @Test fun cardErrorDark() = overlay().run {
+        startCard("daily", fromFarsi = false)
+        fail("API key not accepted. Check it in Settings.", settingsLink = true)
+        save(cardView()!!, "card-error-dark")
+    }
+
+    @Test fun bubbleAndMenu() = overlay().run {
+        showBubble("F")
+        save(bubbleView(), "bubble")
+        setState(Overlay.State.WORKING)
+        save(bubbleView(), "bubble-working")
+    }
+
+    /** Lays out a detached view at phone width and saves it. */
+    private fun save(v: View, name: String) {
+        val w = 784
+        v.measure(View.MeasureSpec.makeMeasureSpec(if (v.layoutParams?.width == -1 || v.layoutParams == null) w else v.layoutParams.width, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
+        v.layout(0, 0, v.measuredWidth, v.measuredHeight)
+        val bmp = Bitmap.createBitmap(v.measuredWidth, v.measuredHeight, Bitmap.Config.ARGB_8888)
+        Canvas(bmp).apply { drawColor(0xFFDDDAD2.toInt()) ; v.draw(this) }
+        val out = File("build/screens").apply { mkdirs() }
+        File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
     private fun shoot(name: String) {
         val activity = Robolectric.buildActivity(SettingsActivity::class.java).setup().get()
         val content = activity.findViewById<View>(android.R.id.content)

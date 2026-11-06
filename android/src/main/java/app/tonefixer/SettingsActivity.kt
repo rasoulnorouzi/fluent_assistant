@@ -150,7 +150,7 @@ class SettingsActivity : Activity() {
             addView(key, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
             addView(Ui.button(context, p, "Test") { test() }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
         }, spaced(8))
-        if (testStatus.isNotEmpty()) root.addView(small(testStatus).apply { setTextColor(if (prefs.keyOk(pr.id)) p.primary else p.clayDeep) }, spaced(6))
+        if (testStatus.isNotEmpty()) root.addView(small(testStatus).apply { setTextColor(if (prefs.keyOk(pr.id)) p.primary else p.warn) }, spaced(6))
         if (pr.keyHelp.isNotEmpty()) root.addView(small("Get a key ↗").apply {
             setTextColor(p.primary); setOnClickListener { open(Intent(Intent.ACTION_VIEW, Uri.parse(pr.keyHelp))) }
             minHeight = dp(44); gravity = Gravity.CENTER_VERTICAL

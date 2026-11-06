@@ -17,17 +17,21 @@ object Ui {
     class Palette(
         val bg: Int, val card: Int, val ink: Int, val muted: Int, val line: Int,
         val primary: Int, val onPrimary: Int, val sage: Int, val clay: Int, val clayDeep: Int, val cream: Int,
+        /** Error / needs-attention text; readable on [card]. */
+        val warn: Int,
     )
 
     private val light = Palette(
         bg = 0xFFF3F0E8.toInt(), card = 0xFFFBF8F1.toInt(), ink = 0xFF2B2A26.toInt(), muted = 0xFF6B675E.toInt(),
         line = 0xFFCFC8B8.toInt(), primary = 0xFF4F6B55.toInt(), onPrimary = 0xFFFBF8F1.toInt(),
         sage = 0xFF6F8D75.toInt(), clay = 0xFFC47A5A.toInt(), clayDeep = 0xFFA35A3A.toInt(), cream = 0xFFFBF8F1.toInt(),
+        warn = 0xFFA35A3A.toInt(),
     )
     private val dark = Palette(
         bg = 0xFF1F2320.toInt(), card = 0xFF2A302B.toInt(), ink = 0xFFECE7DA.toInt(), muted = 0xFFA9A397.toInt(),
         line = 0xFF4A524B.toInt(), primary = 0xFF9BBBA2.toInt(), onPrimary = 0xFF1F2320.toInt(),
         sage = 0xFF6F8D75.toInt(), clay = 0xFFD98E6E.toInt(), clayDeep = 0xFFA35A3A.toInt(), cream = 0xFFFBF8F1.toInt(),
+        warn = 0xFFE7A285.toInt(),
     )
 
     fun palette(ctx: Context): Palette =

@@ -27,6 +27,9 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Added `Ui.kt` (palette light/dark, chip/button helpers, a small wrapping Flow layout) because Settings and the overlay share it, so it lives in one file instead of two copies. Settings is built in code (no XML layouts).
 - 2026-11-06 Settings has a "Try it here" text box so the bubble can be tested inside the app itself.
 - 2026-11-06 UI is checked without a phone via Robolectric screenshot tests (`ScreenshotTest`, test-only dependency) → PNGs in android/build/screens/.
+- 2026-11-06 Overlay = 3 TYPE_ACCESSIBILITY_OVERLAY windows (bubble, long-press menu, preview card), all FLAG_NOT_FOCUSABLE so the app keeps its keyboard/cursor. Card sits at the top of the screen.
+- 2026-11-06 Apply = ACTION_SET_TEXT on the whole field (selection spliced in), verified by re-reading the node; fallback = clipboard + select range + ACTION_PASTE; last resort = "copied, paste it" message. The user's leading/trailing whitespace is kept.
+- 2026-11-06 Tone chips in the card rerun on the same text read at the tap; picking from the long-press menu reads the field fresh.
 
 ## Preferences
 - 2026-11-05 Speed is the top priority (direct API calls, streaming, pre-warm, thinking off, short fixed prompt).
@@ -44,6 +47,8 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Robolectric downloads its Android runtime jar at test time and Maven Central answered 429. Fix: curl it (with retries) into ~/.m2/repository/org/robolectric/android-all-instrumented/15-robolectric-13954326-i7/; Robolectric picks it up from there. In CI (GitHub) it downloads normally.
 - 2026-11-06 Password EditTexts default to a monospace font (the hint looked like a typewriter). Fix: set `typeface = Typeface.DEFAULT` after setting inputType.
 - 2026-11-06 No /dev/kvm in the cloud box → no emulator; Robolectric screenshots are the way to see the UI here.
+- 2026-11-06 Gotcha: inside `LinearLayout(ctx).apply { }` a field named `tag` resolves to View.tag (the layout's own property), so addView(tag, …) didn't compile. Fix: renamed it farsiTag. Watch for View property names (tag, id, alpha, …) inside apply blocks.
+- 2026-11-06 Error text used clay-deep, which is unreadable on the dark card. Fix: palette.warn (#E7A285 in dark).
 
 ## Facts learned (API)
 - 2026-11-05 Claude Haiku 5.5 = `claude-haiku-5-5`; thinking is ON by default; `thinking:{type:"disabled"}` is allowed at effort low/medium/high; `temperature/top_p/top_k` are rejected on API version `2026-10-21`. Browser calls need header `anthropic-dangerous-direct-browser-access: true`.
