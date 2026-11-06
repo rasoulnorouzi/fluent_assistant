@@ -22,6 +22,12 @@ class ScreenshotTest {
 
     @Test fun settingsLight() = shoot("settings-light")
 
+    @Test fun settingsUpdateReady() = shoot("settings-update") {
+        updInfo = Update.Info(99, "0.2.99", "https://example.com/a.apk", "00", "Faster bubble, and a fix for Telegram.")
+        updStatus = "Version 0.2.99 is ready."
+        renderUpdate()
+    }
+
     @Config(qualifiers = "+night")
     @Test fun settingsDark() = shoot("settings-dark")
 
@@ -94,8 +100,13 @@ class ScreenshotTest {
         File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
-    private fun shoot(name: String) {
+    private fun app() = org.robolectric.RuntimeEnvironment.getApplication()
+
+    private fun shoot(name: String, tweak: SettingsActivity.() -> Unit = {}) {
+        // Pretend we just checked, so the screen doesn't go to the network for an update.
+        Prefs(app()).lastUpdateCheck = System.currentTimeMillis()
         val activity = Robolectric.buildActivity(SettingsActivity::class.java).setup().get()
+        activity.tweak()
         val content = activity.findViewById<View>(android.R.id.content)
         // Measure the whole scroll content so the PNG shows the full screen, not just the first page.
         val scroll = (content as android.view.ViewGroup).getChildAt(0) as android.widget.ScrollView

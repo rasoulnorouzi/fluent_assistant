@@ -3,6 +3,7 @@ package app.tonefixer
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageInstaller
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
@@ -28,6 +29,15 @@ class SettingsActivity : Activity() {
     private var keyField: EditText? = null
     private var customMode = false
     private var testStatus = ""
+
+    // In-app update state (PLAN.md §4.7). The section redraws on its own, so a background check
+    // never rebuilds the screen under the user's fingers.
+    private var aboutBox: LinearLayout? = null
+    internal var updInfo: Update.Info? = null // internal: set by the screenshot test
+    internal var updStatus = ""
+    private var updError = false
+    private var updBusy = false
+    private var installWhenAllowed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,7 +66,32 @@ class SettingsActivity : Activity() {
         setContentView(scroll)
     }
 
-    override fun onResume() { super.onResume(); build() }
+    override fun onResume() {
+        super.onResume()
+        build()
+        if (installWhenAllowed && packageManager.canRequestPackageInstalls()) { installWhenAllowed = false; startUpdate() }
+        else if (System.currentTimeMillis() - prefs.lastUpdateCheck > 20 * 3600_000L) checkUpdate(manual = false)
+    }
+
+    /** Android's installer reports back here (see Update.install). */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.action != Update.ACTION_STATUS) return
+        when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
+            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+                @Suppress("DEPRECATION") val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+                if (confirm != null) { runCatching { startActivity(confirm) }; return }
+                setUpd("Android didn't show the install screen. Use \"Download in browser\" below.", error = true)
+            }
+            PackageInstaller.STATUS_SUCCESS -> setUpd("Updated.")
+            PackageInstaller.STATUS_FAILURE_ABORTED -> setUpd("Update cancelled.")
+            PackageInstaller.STATUS_FAILURE_CONFLICT, PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> setUpd(
+                "Android refused the update: it's signed with a different key than the installed app. " +
+                "Uninstall Tone Fixer once and install the new version from the browser link below.", error = true)
+            else -> setUpd("Update failed: ${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "unknown reason"}.", error = true)
+        }
+        updBusy = false; renderUpdate()
+    }
     override fun onPause() { super.onPause(); saveKey() }
 
     private fun provider() = cfg.provider(prefs.provider)
@@ -175,6 +210,81 @@ class SettingsActivity : Activity() {
         }, spaced(8))
 
         root.addView(small("Hold the bubble to pick another tone. Your keys stay on this phone, encrypted."), spaced(20))
+
+        // About & updates
+        root.addView(label("About & updates"), spaced(28))
+        aboutBox = card().also { root.addView(it, spaced(8)) }
+        renderUpdate()
+    }
+
+    // ---------- updates ----------
+
+    private fun setUpd(status: String, error: Boolean = false) { updStatus = status; updError = error }
+
+    internal fun renderUpdate() {
+        val box = aboutBox ?: return
+        box.removeAllViews()
+        val info = updInfo
+        val newer = info != null && info.versionCode > Update.installedCode(this)
+        box.addView(text("Tone Fixer ${Update.installedName(this)}", 15f, p.ink))
+        if (updStatus.isNotEmpty()) box.addView(small(updStatus).apply { setTextColor(if (updError) p.warn else p.muted) }, spaced(4))
+        if (newer && info!!.notes.isNotBlank() && !updError) box.addView(small(info.notes), spaced(4))
+        val btn = if (newer) Ui.button(this, p, "Update to ${info!!.versionName}") { startUpdate() }
+                  else Ui.chip(this, p, "Check for updates", false) { checkUpdate(manual = true) }
+        btn.isEnabled = !updBusy; btn.alpha = if (updBusy) 0.5f else 1f
+        box.addView(btn, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(10) })
+        if (newer && updError) box.addView(small("Download in browser ↗").apply {
+            setTextColor(p.primary); minHeight = dp(44); gravity = Gravity.CENTER_VERTICAL
+            setOnClickListener { open(Intent(Intent.ACTION_VIEW, Uri.parse(info!!.apkUrl))) }
+        })
+    }
+
+    private fun checkUpdate(manual: Boolean) {
+        if (updBusy) return
+        updBusy = true; if (manual) setUpd("Checking…"); renderUpdate()
+        thread {
+            val r = runCatching { Update.check() }
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                updBusy = false
+                r.onSuccess { info ->
+                    prefs.lastUpdateCheck = System.currentTimeMillis()
+                    updInfo = info
+                    if (info.versionCode > Update.installedCode(this)) setUpd("Version ${info.versionName} is ready.")
+                    else if (manual) setUpd("You have the latest version.") else setUpd("")
+                }.onFailure { if (manual) setUpd("Couldn't check for updates. Check your connection and try again.", error = true) }
+                renderUpdate()
+            }
+        }
+    }
+
+    private fun startUpdate() {
+        val info = updInfo ?: return
+        if (updBusy) return
+        if (!packageManager.canRequestPackageInstalls()) {
+            // One-time switch: Settings → "Install unknown apps" → Tone Fixer. onResume continues.
+            installWhenAllowed = true
+            setUpd("Allow \"Install unknown apps\" for Tone Fixer, then come back.")
+            renderUpdate()
+            open(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
+            return
+        }
+        updBusy = true; setUpd("Downloading…"); renderUpdate()
+        thread {
+            val r = runCatching {
+                val apk = Update.download(info, cacheDir) { pct -> runOnUiThread { if (updBusy) { setUpd("Downloading… $pct%"); renderUpdate() } } }
+                runOnUiThread { setUpd("Installing…"); renderUpdate() }
+                Update.install(this, apk)
+            }
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                r.onFailure {
+                    updBusy = false
+                    setUpd("Update failed: ${it.message ?: "no connection"}.", error = true)
+                    renderUpdate()
+                }
+            }
+        }
     }
 
     private fun test() {

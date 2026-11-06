@@ -33,6 +33,11 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Brand: adaptive launcher icon (vector, with monochrome layer for themed icons). Title font = Fraunces SOFT 100 / wght 600, downloaded from Google Fonts with `&text=Tone Fixer`, so it's a 3.8 KB file with only those letters (OFL licence). Body text = system sans.
 - 2026-11-06 Release signing: env vars TF_KEYSTORE_FILE/PASSWORD, TF_KEY_ALIAS/PASSWORD (or android/keystore.properties locally). CI decodes secret TF_KEYSTORE_BASE64. versionCode = GITHUB_RUN_NUMBER; v* tags attach the APK to a GitHub Release. Release APK ≈ 106 KB (R8 on).
 - 2026-11-06 The repo is PUBLIC: never commit keys or keystores (.gitignore blocks *.jks, *.keystore, *.key, keystore.properties).
+- 2026-11-06 Approved: in-app updates from a dedicated `updates` branch (`android/latest.json` + APK, read via raw.githubusercontent.com), not GitHub Releases, because CI is still blocked. Permission given to push to that branch.
+- 2026-11-06 Approved: one fixed release key made here (PKCS12, alias `tonefixer`, RSA 4096, SHA-256 cert fingerprint 37:74:E3:B1:…:8B:5F:CB), kept OUTSIDE the repo (~/tonefixer-keys in the cloud box) and sent to the user to keep. A new cloud session needs the user to hand it back (or CI secrets). One-time: uninstall the debug test APK before the first release-signed install.
+- 2026-11-06 versionCode = TF_VERSION_CODE (publish script: last published + 1) or the CI run number; versionName = "0.2.<versionCode>".
+- 2026-11-06 Update install = framework PackageInstaller session; the status PendingIntent goes to SettingsActivity (singleTop, onNewIntent), so no BroadcastReceiver. Needs REQUEST_INSTALL_PACKAGES + the one-time "Install unknown apps" switch. Auto-check when Settings opens, at most every 20 h.
+- 2026-11-06 Approved: Chrome extension in plain JavaScript (no TypeScript/esbuild/npm); `extension/pack.sh` copies shared JSON in and zips. Order: updater first, then extension.
 
 ## Preferences
 - 2026-11-05 Speed is the top priority (direct API calls, streaming, pre-warm, thinking off, short fixed prompt).

@@ -259,7 +259,7 @@ android/
 
 ---
 
-### 4.7 In-app updates (added 2026-11-06, waiting for approval)
+### 4.7 In-app updates (added and approved 2026-11-06)
 
 - **Where**: a small "About & updates" section at the bottom of Settings: version number,
   "Check for updates" button, and the result ("You're up to date" / "Version 0.2.14 is ready ·
@@ -285,7 +285,7 @@ android/
   `SettingsActivity.kt` and the manifest. Tests: parsing `latest.json`, the version comparison,
   the SHA-256 check (JVM unit tests), plus a screenshot of the About section.
 
-## 5. Browser extension (Phase 2, plan revised 2026-11-06, waiting for approval)
+## 5. Browser extension (Phase 2, plan revised and approved 2026-11-06)
 
 - **Chrome Manifest V3, plain JavaScript, no build step and no npm packages** (changed from
   "TypeScript + esbuild": fewer tools, and you can load the folder as it is). Loaded as an

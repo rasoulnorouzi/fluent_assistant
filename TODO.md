@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 0/5 · Phase 2: 0/10 · Phase 3: 0/7**
-**Current step:** planning Phase 1b (in-app updates) and Phase 2 (Chrome extension); waiting for your approval. 1.16 (your phone test) still open.
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 3/5 · Phase 2: 0/10 · Phase 3: 0/7**
+**Current step:** U.4, `updates` branch + publish script. 1.16 (your phone test) still open.
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -36,9 +36,9 @@
 - [ ] Service survives a reboot / a day of normal use (Pixel + Xiaomi/OnePlus)
 
 ## Phase 1b: In-app updates (Android, PLAN.md §4.7, waiting for approval)
-- [ ] U.1 Fixed release signing key: create it, send it to you, sign builds with it
-- [ ] U.2 `Update.kt`: read `latest.json`, compare versions, download, SHA-256 check, PackageInstaller
-- [ ] U.3 "About & updates" section in Settings (version, Check button, auto-check once a day)
+- [x] U.1 Fixed release signing key: create it, send it to you, sign builds with it (made; sent with the first update)
+- [x] U.2 `Update.kt`: read `latest.json`, compare versions, download, SHA-256 check, PackageInstaller
+- [x] U.3 "About & updates" section in Settings (version, Check button, auto-check once a day)
 - [ ] U.4 `updates` branch with `latest.json` + APK; `publish-update.sh` to push a new version
 - [ ] U.5 Unit tests + screenshot; publish a 2nd version and update to it (you, on the phone)
 

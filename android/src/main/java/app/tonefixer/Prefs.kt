@@ -31,6 +31,11 @@ class Prefs(ctx: Context) {
         get() = sp.getInt("bubbleY", -1)
         set(v) = sp.edit().putInt("bubbleY", v).apply()
 
+    /** When Settings last looked for an update (ms), so the automatic check runs at most once a day. */
+    var lastUpdateCheck: Long
+        get() = sp.getLong("lastUpdateCheck", 0)
+        set(v) = sp.edit().putLong("lastUpdateCheck", v).apply()
+
     fun model(provider: String): String? = sp.getString("model_$provider", null)
     fun setModel(provider: String, model: String) = sp.edit().putString("model_$provider", model).apply()
 

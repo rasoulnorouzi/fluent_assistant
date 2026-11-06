@@ -13,10 +13,12 @@ android {
         applicationId = "app.tonefixer"
         minSdk = 29
         targetSdk = 36
-        // CI run number keeps versionCode increasing, so every new APK installs over the old one.
-        val run = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
-        versionCode = run
-        versionName = System.getenv("GITHUB_REF_NAME")?.takeIf { it.startsWith("v") }?.removePrefix("v") ?: "0.1.$run"
+        // versionCode must grow with every update. publish-update.sh sets TF_VERSION_CODE
+        // (last published + 1); CI falls back to its run number.
+        val code = System.getenv("TF_VERSION_CODE")?.toIntOrNull()
+            ?: System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        versionCode = code
+        versionName = "0.2.$code"
     }
 
     // Release signing: from env vars (GitHub secrets in CI) or android/keystore.properties locally.
