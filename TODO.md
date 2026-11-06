@@ -1,18 +1,18 @@
 # TODO
 
-**Progress: Phase 0: 4/6 done (67%) · Phase 1: 0/16 (0%) · Phase 2: 0/8 · Phase 3: 0/7**
-**Current step:** 0.5/0.6, mockup published (https://claude.ai/artifact/HALYw7vAi4PCKBCsP5bqRL), waiting for your review of it and PLAN.md
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 1/16 (6%) · Phase 2: 0/8 · Phase 3: 0/7**
+**Current step:** 1.2, GitHub Actions workflow
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
 - [x] 0.2 Write `PLAN.md` (all three platforms)
 - [x] 0.3 Write `TODO.md` (this file)
 - [x] 0.4 Create `CLAUDE.md` (project memory)
-- [ ] 0.5 Logo + UI mockup (bubble, preview card, settings), reviewed by you (made: `design/logo.svg` + the canvas; waiting for your review)
-- [ ] 0.6 You approve PLAN.md (and answer the open questions in §9)
+- [x] 0.5 Logo + UI mockup (bubble, preview card, settings), reviewed by you
+- [x] 0.6 You approve PLAN.md (and answer the open questions in §9)
 
 ## Phase 1: Android (build now)
-- [ ] 1.1 Gradle project skeleton (`android/`), empty Settings screen, builds locally with the wrapper
+- [x] 1.1 Gradle project skeleton (`android/`), empty Settings screen, builds locally with the wrapper
 - [ ] 1.2 GitHub Actions workflow: unit tests + APK build (unsigned at first) goes green
 - [ ] 1.3 `shared/tones.json`, `shared/providers.json`, `shared/API.md`, copied into assets by Gradle
 - [ ] 1.4 `Llm.kt`: config loading, request builders, `extra` merge, max_tokens, plus unit tests

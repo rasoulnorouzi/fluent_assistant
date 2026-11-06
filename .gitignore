@@ -1,0 +1,17 @@
+# Build output
+.gradle/
+build/
+android/.gradle/
+android/build/
+local.properties
+*.apk
+*.aab
+# Secrets (never commit)
+*.jks
+*.keystore
+*.key
+keystore.properties
+# IDE
+.idea/
+*.iml
+.DS_Store
