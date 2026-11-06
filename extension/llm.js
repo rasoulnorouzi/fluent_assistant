@@ -195,6 +195,9 @@ const validProviders = (p) => p && p.providers && p.providers[p.defaultProvider]
  * shipped in the extension, else the shipped ones. Each file is chosen on its own.
  */
 export function chooseConfig(bundled, remote) {
+  // Downloaded files are stored as text: chrome.storage would re-sort object keys (provider order).
+  const parse = (x) => { if (typeof x !== "string") return x; try { return JSON.parse(x); } catch { return null; } };
+  remote = remote && { tones: parse(remote.tones), providers: parse(remote.providers) };
   const newer = (r, b) => (r.version ?? 0) >= (b.version ?? 0);
   return {
     tones: validTones(remote?.tones) && newer(remote.tones, bundled.tones) ? remote.tones : bundled.tones,

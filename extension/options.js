@@ -30,6 +30,11 @@ function render() {
   const ids = modelList(p, pid, s);
   const labelOf = (id) => p.models.find((m) => m.id === id)?.label || id;
 
+  $("nowUsing").textContent = `Now using: ${labelOf(model)}`;
+  const withKeys = Object.entries(providers).filter(([id]) => cleanKey(s.keys[id])).map(([, o]) => o.label.split(" ").pop());
+  $("nowKeys").textContent = withKeys.length > 1 ? `Keys saved for ${withKeys.join(" and ")}. Right-click the bubble to switch model, or click the model name in the result card.`
+    : withKeys.length ? `Key saved for ${withKeys[0]}. Add a key for another service to switch between them from the bubble.` : "No API key yet: add one below.";
+
   $("providers").replaceChildren(...Object.entries(providers).map(([id, o]) =>
     chip(o.label.split(" ").pop(), id === pid, () => { editModels = false; testMsg = null; save({ provider: id }).then(render); })));
 
@@ -132,7 +137,9 @@ $("checkNow").addEventListener("click", async (e) => {
   e.preventDefault();
   $("updateState").textContent = "Checking…";
   const info = await chrome.runtime.sendMessage({ type: "checkUpdates", force: true });
-  if (info?.remoteCfg && JSON.stringify(info.remoteCfg.tones) !== JSON.stringify(tonesCfg)) location.reload(); // show new tones
+  // Reload only if the downloaded files change what's in use (shows the new tones/models).
+  const next = info?.remoteCfg && chooseConfig({ tones: bundledTones, providers: bundledProviders }, info.remoteCfg);
+  if (next && JSON.stringify(next) !== JSON.stringify(cfg)) location.reload();
   renderUpdate(info);
 });
 renderUpdate(await chrome.runtime.sendMessage({ type: "checkUpdates", force: false }).catch(() => null));

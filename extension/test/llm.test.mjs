@@ -189,6 +189,11 @@ test("updates: downloaded config is used only when valid and not older; version 
   assert.equal(llm.chooseConfig(bundled, { tones: { ...newTones, tones: [] } }).tones, cfg.tones); // broken
   assert.equal(llm.chooseConfig(bundled, { tones: { ...newTones, defaultTone: "gone" } }).tones, cfg.tones);
   assert.equal(llm.chooseConfig(bundled, { providers: { providers: {} } }).providers, cfg.providers);
+  // Stored as text (keeps provider order); broken text falls back to the shipped files.
+  const fromText = llm.chooseConfig(bundled, { tones: JSON.stringify(newTones), providers: JSON.stringify(cfg.providers) });
+  assert.equal(fromText.tones.tones[1].label, "Everyday");
+  assert.deepEqual(Object.keys(fromText.providers.providers), Object.keys(cfg.providers.providers));
+  assert.equal(llm.chooseConfig(bundled, { tones: "{broken", providers: "" }).tones, cfg.tones);
   assert.ok(llm.isNewerVersion("0.10.0", "0.9.3"));
   assert.ok(llm.isNewerVersion("0.2.1", "0.2.0"));
   assert.ok(!llm.isNewerVersion("0.2.0", "0.2.0"));

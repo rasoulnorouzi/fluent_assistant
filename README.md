@@ -34,6 +34,10 @@ server, no account and no tracking. The key is stored encrypted on the phone.
 it to move it (it snaps to the nearer side). If you select part of the text first, only the
 selection is rewritten.
 
+**Which model:** Settings shows "Now using: …" at the top. With keys for both Gemini and Claude,
+hold the bubble (right-click in Chrome) and pick a model under MODEL, or tap the model name in
+the result card to redo the same text with the next model and compare.
+
 **Turning it off:** drag the bubble onto the ✕ that appears at the bottom of the screen. It stays
 off everywhere until you open the Tone Fixer app again, which turns it back on. To remove the app:
 Tone Fixer → About & updates → **Uninstall Tone Fixer** (or long-press its icon → Uninstall).

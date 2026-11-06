@@ -32,6 +32,15 @@ function mockServer() {
     if (u.startsWith("/updates/") && remote[u]) { res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify(remote[u])); }
     if (req.method === "HEAD") { res.writeHead(200); return res.end(); }
     let raw = ""; for await (const c of req) raw += c;
+    if (req.url.startsWith("/v1/messages")) { // Claude-style answers: "Claude: <text>"
+      const input = JSON.parse(raw).messages[0].content.replace(/^<text>\n([\s\S]*)\n<\/text>$/, "$1");
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      const ev = (o) => `event: ${o.type}\ndata: ${JSON.stringify(o)}\n\n`;
+      res.write(ev({ type: "message_start", message: {} }));
+      res.write(ev({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: `Claude: ${input.trim()}` } }));
+      res.write(ev({ type: "message_delta", delta: { stop_reason: "end_turn" } }));
+      return res.end(ev({ type: "message_stop" }));
+    }
     if (!req.url.includes(":streamGenerateContent")) { res.writeHead(404); return res.end(); }
     if (req.headers["x-goog-api-key"] !== "test-key") {
       res.writeHead(400, { "content-type": "application/json" });
@@ -62,6 +71,8 @@ function mockServer() {
   const prov = JSON.parse(fs.readFileSync(path.join(dir, "providers.json"), "utf8"));
   prov.providers.gemini.url = `${base}/v1beta/models/{model}:streamGenerateContent?alt=sse`;
   prov.providers.gemini.warmUrl = `${base}/`;
+  prov.providers.claude.url = `${base}/v1/messages`;
+  prov.providers.claude.warmUrl = `${base}/`;
   fs.writeFileSync(path.join(dir, "providers.json"), JSON.stringify(prov));
   // Fake `updates` branch: a newer Daily style (marked) and a newer extension version.
   const tonesRemote = JSON.parse(fs.readFileSync(path.join(dir, "tones.json"), "utf8"));
@@ -251,6 +262,28 @@ function mockServer() {
     await bubble.waitFor({ state: "visible" });
   });
 
+  await check("pick a model in the menu; card shows it; ⇄ reruns with the next model", async () => {
+    await sw.evaluate(() => chrome.storage.local.set({ keys: { gemini: "test-key", claude: "test-key" } }));
+    await page.fill("#ta", "see you at 5");
+    await page.click("#ta");
+    await page.waitForTimeout(300); // state reloads after the key change
+    await bubble.click({ button: "right" });
+    assert.deepEqual(await ui.locator(".model-row .two span").allTextContents(), ["Gemini 3.5 Flash-Lite", "Gemini 3.1 Flash-Lite", "Claude Haiku 5.5"]);
+    await shot("ext-menu-models");
+    await ui.locator(".model-row", { hasText: "Claude Haiku 5.5" }).click();
+    await page.waitForTimeout(200);
+    await bubble.click();
+    await ui.locator(".ok:not([disabled])").waitFor();
+    assert.equal(await ui.locator(".body").textContent(), "Claude: see you at 5");
+    assert.match(await ui.locator(".card .model").textContent(), /^Claude Haiku 5\.5\s+⇄$/);
+    await shot("ext-card-claude");
+    await ui.locator(".card .model").click(); // next: back to the first Gemini model
+    await ui.locator(".body", { hasText: "Hi! see you at 5" }).waitFor();
+    assert.match(await ui.locator(".card .model").textContent(), /^Gemini 3\.5 Flash-Lite/);
+    await ui.locator(".x").click();
+    await sw.evaluate(() => chrome.storage.local.set({ keys: { gemini: "test-key" }, provider: "gemini" }));
+  });
+
   await check("dark mode card", async () => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.evaluate(() => { document.body.style.background = "#111"; });
@@ -299,7 +332,7 @@ function mockServer() {
     assert.equal(await o.locator("#newVersion").textContent(), "9.9.9");
     assert.match(await o.locator("#download").getAttribute("href"), /updates\/extension\/tone-fixer-extension-9\.9\.9\.zip$/);
     assert.equal(await sw.evaluate(() => chrome.action.getBadgeText({})), "NEW");
-    await o.locator("main > .card").screenshot({ path: path.join(SHOTS, "ext-update-notice.png") });
+    await o.locator("main > .card", { hasText: "Tone Fixer 0." }).screenshot({ path: path.join(SHOTS, "ext-update-notice.png") });
     await o.close();
   });
 

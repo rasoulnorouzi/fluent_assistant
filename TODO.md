@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 2b (quality): 6/6 · Phase 2c (off switch): 4/4 · Phase 2d (model choice): 1/3 · Phase 3: 0/7**
-**Current step:** M.2, model choice in the extension.
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 2b (quality): 6/6 · Phase 2c (off switch): 4/4 · Phase 2d (model choice): 3/3 (100%) · Phase 3: 0/7**
+**Current step:** your install and check (U.5, 2.10, 1.16): Android 0.2.18, extension 0.2.3, the before/after tone page.
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -70,8 +70,8 @@
 
 ## Phase 2d: Choose the model where you use it (asked 2026-11-06)
 - [x] M.1 Android: MODEL section in the bubble menu (models of every service with a saved key); card shows the model, tap = rerun with the next one; "Now using" in Settings
-- [ ] M.2 Extension: the same (right-click menu, card, settings)
-- [ ] M.3 Tests + screenshots; publish Android + extension
+- [x] M.2 Extension: the same (right-click menu, card, settings)
+- [x] M.3 Tests + screenshots (Android 50, extension 15 + e2e 14/14); published Android 0.2.18, extension 0.2.3
 
 ## Phase 3: iOS (planned)
 - [ ] 3.1 `ios/SHORTCUT.md`: Back Tap shortcut, step by step (interim solution)

@@ -1,6 +1,6 @@
 // Service worker: holds the settings, makes the API calls (streaming) and sends the text back to
 // the page over a port. Pages never see the API key.
-import { buildBody, stream, cleanKey, currentModel, chooseConfig, isNewerVersion } from "./llm.js";
+import { buildBody, stream, cleanKey, currentModel, modelList, chooseConfig, isNewerVersion } from "./llm.js";
 
 let cfgPromise = null;
 /**
@@ -25,11 +25,13 @@ async function checkUpdates(force = false) {
   if (!force && Date.now() - lastCheck < 6 * 3600_000) return;
   await chrome.storage.local.set({ lastCheck: Date.now() });
   // The query string sidesteps caches between us and GitHub (raw files are cached ~5 min).
+  // Kept as text (valid JSON only): chrome.storage would re-sort object keys, e.g. the provider order.
   const get = (path) => fetch(`${UPDATES}${path}?t=${Math.floor(Date.now() / 60_000)}`, { cache: "no-store" })
-    .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    .then((r) => (r.ok ? r.text() : null)).then((t) => (t && JSON.parse(t) ? t : null)).catch(() => null);
   const [tones, providers, latest] = await Promise.all([get("shared/tones.json"), get("shared/providers.json"), get("extension/latest.json")]);
   if (tones && providers) { await chrome.storage.local.set({ remoteCfg: { tones, providers, at: Date.now() } }); cfgPromise = null; }
-  if (latest?.version) await chrome.storage.local.set({ latest });
+  const info = latest && JSON.parse(latest);
+  if (info?.version) await chrome.storage.local.set({ latest: info });
   await showBadge();
 }
 
@@ -53,6 +55,16 @@ function pick(cfg, s) {
   return { providerId, provider, tone, model, key: cleanKey(s.keys[providerId]) };
 }
 
+/** Models of every service with a saved key (or just the current service if none has one yet). */
+function choices(cfg, s) {
+  const all = Object.entries(cfg.providers.providers);
+  const withKey = all.filter(([id]) => cleanKey(s.keys[id])).length ? all.filter(([id]) => cleanKey(s.keys[id])) : all.filter(([id]) => id === pick(cfg, s).providerId);
+  return withKey.flatMap(([id, p]) => modelList(p, id, s).map((m) => ({
+    provider: id, model: m, label: p.models.find((x) => x.id === m)?.label || m, service: p.label.split(" ").pop(),
+  })));
+}
+const labelOf = (provider, model) => provider.models.find((x) => x.id === model)?.label || model;
+
 // ---------- rewrite (port "rewrite"): {text, tone} in; {type:"text"|"end", …} out ----------
 
 chrome.runtime.onConnect.addListener((port) => {
@@ -65,6 +77,7 @@ chrome.runtime.onConnect.addListener((port) => {
     const s = await settings();
     if (toneId) { s.tone = toneId; chrome.storage.local.set({ tone: toneId }); }
     const { provider, tone, model, key } = pick(cfg, s);
+    send({ type: "using", label: labelOf(provider, model) }); // the card shows which model writes this
     if (!key) return send({ type: "end", error: `Add your ${provider.label.split(" ").pop()} API key in Tone Fixer settings.`, settings: true });
     const out = await stream(provider, model, key, buildBody(cfg, provider, model, tone, text), abort.signal,
       (piece) => send({ type: "text", text: piece }));
@@ -84,7 +97,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     switch (msg.type) {
       case "state": // what the page needs to draw the bubble, menu and card
         checkUpdates(); // at most every 6 hours
-        return reply({ tones: cfg.tones.tones.map(({ id, label, letter }) => ({ id, label, letter })), tone: cur.tone.id });
+        return reply({
+          tones: cfg.tones.tones.map(({ id, label, letter }) => ({ id, label, letter })), tone: cur.tone.id,
+          models: choices(cfg, s), current: { provider: cur.providerId, model: cur.model, label: labelOf(cur.provider, cur.model) },
+        });
+      case "setModel": // picked in the bubble menu or the card
+        await chrome.storage.local.set({ provider: msg.provider, models: { ...s.models, [msg.provider]: msg.model } });
+        return reply({});
       case "warm": { // open DNS + TLS early, so the real request reuses the connection
         const url = cur.provider.warmUrl;
         if (url !== lastWarm.url || Date.now() - lastWarm.at > 60_000) {

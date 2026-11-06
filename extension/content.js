@@ -55,6 +55,9 @@
   // ---------- state ----------
 
   let tones = [];          // [{id, label, letter}]
+  let models = [];         // [{provider, model, label, service}]: services with a saved key
+  let current = null;      // {provider, model, label}
+  let cardTone = null;     // tone shown in the card
   let tone = "daily";      // last used tone
   let field = null;        // the text box the bubble belongs to
   let snap = null;         // what was read at the click: {el, full, input, start, end, range}
@@ -69,11 +72,12 @@
   }
   async function loadState() {
     const s = await send({ type: "state" });
-    if (s) { tones = s.tones; tone = s.tone; ui && setLetter(); }
+    if (s) { tones = s.tones; tone = s.tone; models = s.models || []; current = s.current || null; ui && setLetter(); }
   }
   try {
     chrome.storage.onChanged.addListener((c) => {
       if (c.tone) { tone = c.tone.newValue; ui && setLetter(); }
+      if (c.provider || c.models || c.keys || c.modelLists) loadState(); // model list or choice changed
       if (c.hiddenSites) { hiddenHere = (c.hiddenSites.newValue || []).includes(SITE); schedule(); }
     });
   } catch { /* old script after a reload */ }
@@ -139,13 +143,24 @@
             background: var(--bg); color: var(--primary); flex: none; }
   .row.sel .letter { background: var(--on-primary); color: var(--primary); }
   .sep { height: 1px; background: var(--line); margin: 6px 8px; }
+  .menu { max-height: 80vh; overflow-y: auto; scrollbar-width: none; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--muted); margin: 0 6px; flex: none; }
+  .row.sel .dot { background: var(--on-primary); border-color: var(--on-primary); }
+  .two { display: flex; flex-direction: column; line-height: 1.25; padding: 4px 0; }
+  .two small { font-size: 11px; color: var(--muted); }
+  .row.sel .two small { color: var(--on-primary); }
   .row.off { color: var(--muted); }
   .row.off .letter { background: transparent; color: var(--muted); }
 
   .card { position: fixed; border-radius: 22px; background: var(--card); padding: 8px 10px 12px 16px;
           box-shadow: 0 12px 36px rgba(0,0,0,.22), 0 0 0 1px color-mix(in srgb, var(--line) 50%, transparent); }
-  .top { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+  .top { display: flex; align-items: flex-start; gap: 8px; min-height: 36px; }
+  .heading { display: flex; flex-direction: column; min-width: 0; padding-top: 6px; }
+  .titlerow { display: flex; align-items: center; gap: 8px; }
   .title { font-weight: 700; font-size: 15px; color: var(--primary); }
+  .model { font-size: 12px; color: var(--muted); text-align: start; padding: 2px 0; border-radius: 6px; width: fit-content; }
+  .model:not([disabled]):hover { color: var(--ink); }
+  .model[disabled] { cursor: default; }
   .tag { font-size: 12px; color: var(--muted); background: var(--bg); border-radius: 10px; padding: 2px 8px; }
   .x { margin-inline-start: auto; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); }
   .x:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
@@ -200,6 +215,7 @@
     const menu = h("div", { class: "menu", hidden: true, role: "menu", onpointerdown: keepFocus });
 
     const title = h("span", { class: "title" });
+    const model = h("button", { class: "model", onclick: nextModel });
     const tag = h("span", { class: "tag", hidden: true }, "from Farsi");
     const body = h("div", { class: "body" });
     const status = h("div", { class: "status", hidden: true });
@@ -209,13 +225,15 @@
     const card = h("div", { class: "card", hidden: true, role: "dialog", "aria-label": "Tone Fixer", onpointerdown: (e) => {
       if (!e.target.closest?.(".body")) e.preventDefault(); // allow selecting the result text
     } },
-      h("div", { class: "top" }, title, tag, h("button", { class: "x", "aria-label": "Cancel", title: "Cancel (Esc)", onclick: cancel }, icon(CLOSE, 20))),
+      h("div", { class: "top" },
+        h("div", { class: "heading" }, h("div", { class: "titlerow" }, title, tag), model),
+        h("button", { class: "x", "aria-label": "Cancel", title: "Cancel (Esc)", onclick: cancel }, icon(CLOSE, 20))),
       body, status,
       h("div", { class: "foot" }, chips, ok));
 
     root.append(h("div", { class: "tf" }, bubble, menu, card));
     document.documentElement.append(host);
-    return { host, bubble, badge, menu, card, title, tag, body, status, chips, ok };
+    return { host, bubble, badge, menu, card, title, model, tag, body, status, chips, ok };
   }
   const ensureUi = () => (ui && ui.host.isConnected ? ui : (ui = buildUi()));
 
@@ -327,6 +345,15 @@
         run(t.id, !(snap && cardOpen()));
       } }, h("span", { class: "letter" }, t.letter), h("span", {}, t.label)));
     }
+    if (models.length > 1) {
+      m.append(h("div", { class: "sep" }), h("div", { class: "head" }, "MODEL"));
+      for (const x of models) {
+        const sel = current && x.provider === current.provider && x.model === current.model;
+        m.append(h("button", { class: `row model-row${sel ? " sel" : ""}`, role: "menuitemradio", "aria-checked": String(!!sel), onclick: () => {
+          hideMenu(); useModel(x, cardOpen() && !!snap);
+        } }, h("span", { class: "dot" }), h("span", { class: "two" }, h("span", {}, x.label), h("small", {}, x.service))));
+      }
+    }
     m.append(h("div", { class: "sep" }),
       h("button", { class: "row off", role: "menuitem", title: "Bring it back in Tone Fixer settings", onclick: () => { hideMenu(); hideOnThisSite(); } },
         h("span", { class: "letter" }, icon(CLOSE, 14)), h("span", {}, "Hide on this site")));
@@ -390,6 +417,7 @@
     p.onMessage.addListener((m) => {
       if (port !== p) return;
       if (m.type === "text") { result += m.text; renderBody(); return; }
+      if (m.type === "using") { renderModel(m.label); return; }
       if (m.type !== "end") return;
       port = null; p.disconnect();
       if (m.error) fail(m.error, m.settings);
@@ -421,6 +449,8 @@
   function openCard(toneId, fromFarsi) {
     const t = tones.find((x) => x.id === toneId);
     ui.title.textContent = t ? t.label : "";
+    cardTone = toneId;
+    renderModel(current?.label);
     ui.tag.hidden = !fromFarsi;
     ui.status.hidden = true;
     ui.ok.disabled = true;
@@ -431,6 +461,26 @@
     setBubble("working");
     if (ui.card.hidden) { ui.card.hidden = false; chooseCardSide(); }
     placeCard();
+  }
+
+  /** "Claude Haiku 5.5 ⇄": which model wrote this; click to rerun with the next one. */
+  function renderModel(label) {
+    ui.model.hidden = !label;
+    ui.model.textContent = models.length > 1 ? `${label}  ⇄` : label || "";
+    ui.model.disabled = models.length < 2;
+    ui.model.title = models.length > 1 ? "Try the next model on the same text" : "";
+  }
+
+  async function useModel(x, rerun) {
+    await send({ type: "setModel", provider: x.provider, model: x.model });
+    await loadState();
+    if (rerun) run(cardTone || tone, false);
+  }
+
+  function nextModel() {
+    if (streaming || models.length < 2) return;
+    const i = models.findIndex((x) => current && x.provider === current.provider && x.model === current.model);
+    useModel(models[(i + 1) % models.length], true);
   }
 
   function renderBody() {
