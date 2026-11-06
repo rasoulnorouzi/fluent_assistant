@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tone Fixer settings</title>
+<link rel="icon" href="icons/32.png">
+<style>
+  @font-face { font-family: "Fraunces Title"; src: url("fraunces_title.ttf") format("truetype"); font-display: swap; }
+  :root { --bg:#F3F0E8; --card:#FBF8F1; --ink:#2B2A26; --muted:#6B675E; --line:#CFC8B8; --primary:#4F6B55;
+          --on-primary:#FBF8F1; --warn:#A35A3A; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1F2320; --card:#2A302B; --ink:#ECE7DA; --muted:#A9A397; --line:#4A524B; --primary:#9BBBA2;
+            --on-primary:#1F2320; --warn:#E7A285; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 28px 20px 48px; }
+  header { display: flex; align-items: center; gap: 12px; }
+  header img { width: 40px; height: 40px; }
+  h1 { margin: 0; font: 600 28px/1.1 "Fraunces Title", Georgia, serif; }
+  h2 { font-size: 14px; margin: 26px 0 8px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .seg { display: flex; gap: 4px; padding: 4px; border-radius: 16px; background: var(--line); }
+  .seg button { flex: 1; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .chip { height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); }
+  .seg .chip:not(.sel) { background: transparent; border-color: transparent; }
+  .chip:hover { border-color: var(--primary); }
+  .chip.sel { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 700; }
+  .btn { height: 48px; padding: 0 18px; border-radius: 14px; border: 0; background: var(--primary); color: var(--on-primary); font-weight: 700; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  input, textarea { width: 100%; font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line);
+                    border-radius: 14px; padding: 12px; min-height: 48px; }
+  input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+  textarea { min-height: 96px; resize: vertical; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row input { flex: 1; }
+  .status { margin-top: 6px; font-size: 13px; }
+  .status.ok { color: var(--primary); } .status.err { color: var(--warn); }
+  a { color: var(--primary); }
+  .card { background: var(--card); border-radius: 20px; padding: 14px 16px; }
+  kbd { font: 600 12px/1 system-ui, sans-serif; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 3px 6px; background: var(--bg); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header><img src="icons/128.png" alt=""><h1>Tone Fixer</h1></header>
+
+  <h2>Provider</h2>
+  <div class="seg" id="providers"></div>
+
+  <h2>Model</h2>
+  <div class="chips" id="models"></div>
+  <input id="custom" placeholder="Model id" hidden style="margin-top:8px">
+
+  <h2 id="keyLabel">API key</h2>
+  <div class="row">
+    <input id="key" type="password" placeholder="Paste your key" autocomplete="off" spellcheck="false">
+    <button class="btn" id="test">Test</button>
+  </div>
+  <div class="status" id="testStatus" hidden></div>
+  <p class="muted"><a id="keyHelp" href="#" target="_blank" rel="noreferrer">Get a key ↗</a></p>
+
+  <h2>Tone for a click on the bubble</h2>
+  <div class="chips" id="tones"></div>
+
+  <h2>Try it here</h2>
+  <textarea id="try" placeholder="Type something (English or Farsi), then click the bubble"></textarea>
+  <p class="muted">Right-click or hold the bubble to pick another tone. Keyboard: <kbd id="shortcut">Alt+Shift+F</kbd> rewrites,
+    press it again to replace. <a href="#" id="shortcuts">Change shortcut</a></p>
+
+  <h2>About</h2>
+  <div class="card">
+    <div id="version">Tone Fixer</div>
+    <p class="muted" style="margin:6px 0 0">Your keys are stored in this browser only (not encrypted on disk, so use it on your own
+      computer). Updates: load the new folder in <code>chrome://extensions</code>.</p>
+  </div>
+</main>
+<script type="module" src="options.js"></script>
+<script src="content.js"></script>
+</body>
+</html>
