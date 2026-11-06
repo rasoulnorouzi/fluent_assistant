@@ -35,7 +35,7 @@ function mockServer() {
       return res.end(JSON.stringify({ error: { code: 400, message: "API key not valid.", status: "INVALID_ARGUMENT" } }));
     }
     lastBody = JSON.parse(raw);
-    const input = lastBody.contents[0].parts[0].text;
+    const input = lastBody.contents[0].parts[0].text.replace(/^<text>\n([\s\S]*)\n<\/text>$/, "$1");
     const out = `Hi! ${input.trim()}`;
     res.writeHead(200, { "content-type": "text/event-stream" });
     const parts = [out.slice(0, 4), out.slice(4, Math.ceil(out.length / 2)), out.slice(Math.ceil(out.length / 2))];
@@ -123,15 +123,16 @@ function mockServer() {
     assert.equal(await page.inputValue("#ta"), "first part. Hi! second part.");
   });
 
-  await check("right-click → tone menu → Formal email", async () => {
+  await check("right-click → tone menu → Email", async () => {
     await page.fill("#ta", "pls send me the file");
     await page.click("#ta");
     await bubble.click({ button: "right" });
     await ui.locator(".menu").waitFor({ state: "visible" });
     await shot("ext-menu");
-    await ui.locator(".row", { hasText: "Formal email" }).click();
+    await ui.locator(".row", { hasText: "Email" }).click();
     await ui.locator(".ok:not([disabled])").waitFor();
-    assert.equal(await ui.locator(".title").textContent(), "Formal email");
+    assert.equal(await ui.locator(".title").textContent(), "Email");
+    assert.equal(lastBody.contents[0].parts[0].text, "<text>\npls send me the file\n</text>"); // text inside the markers
     assert.equal(await ui.locator(".badge").textContent(), "E");
     assert.equal(await sw.evaluate(() => chrome.storage.local.get("tone").then((s) => s.tone)), "formal");
   });
@@ -236,6 +237,23 @@ function mockServer() {
     await o.click("#test");
     await o.locator("#testStatus", { hasText: "Key works" }).waitFor();
     assert.match(await o.locator("#testStatus").textContent(), /Key works/);
+    // Models: edit → remove one → add one → restore defaults.
+    const chips = () => o.locator("#models .chip").allTextContents();
+    assert.deepEqual(await chips(), ["Gemini 3.5 Flash-Lite", "Gemini 3.1 Flash-Lite", "Edit"]);
+    await o.click("#models .chip >> text=Edit");
+    await o.click("#models .chip >> text=Gemini 3.1 Flash-Lite");
+    assert.deepEqual(await chips(), ["Gemini 3.5 Flash-Lite  ✕", "Done"]);
+    await o.click("#models .chip >> text=Gemini 3.5 Flash-Lite"); // the last one can't be removed
+    assert.equal((await chips()).length, 2);
+    await o.fill("#newModel", " gemini-3.5-flash ");
+    await o.click("#addModel");
+    assert.deepEqual(await chips(), ["Gemini 3.5 Flash-Lite  ✕", "gemini-3.5-flash  ✕", "Done"]);
+    await o.screenshot({ path: path.join(SHOTS, "ext-options-models.png"), fullPage: true });
+    assert.equal(await sw.evaluate(() => chrome.storage.local.get("models").then((s) => s.models.gemini)), "gemini-3.5-flash");
+    await o.click("#restoreModels");
+    await o.click("#models .chip >> text=Done");
+    assert.deepEqual(await chips(), ["Gemini 3.5 Flash-Lite", "Gemini 3.1 Flash-Lite", "Edit"]);
+    assert.equal(await o.locator("#models .chip.sel").textContent(), "Gemini 3.5 Flash-Lite");
     await o.click("#try");
     await o.keyboard.type("salam, man farda nemitoonam biam");
     await o.locator("tone-fixer-ui .bubble").waitFor({ state: "visible" });

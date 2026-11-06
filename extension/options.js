@@ -1,18 +1,18 @@
 // Settings page: provider, model, key (+ Test), tone. Same choices as the Android Settings screen.
-import { buildBody, stream, cleanKey } from "./llm.js";
+import { buildBody, stream, cleanKey, modelList, currentModel } from "./llm.js";
 
 const $ = (id) => document.getElementById(id);
 const [tonesCfg, providersCfg] = await Promise.all(["tones.json", "providers.json"].map((f) => fetch(f).then((r) => r.json())));
 const cfg = { tones: tonesCfg, providers: providersCfg };
 const providers = providersCfg.providers;
 
-let s = await chrome.storage.local.get({ provider: null, tone: null, models: {}, keys: {}, keyOk: {} });
-let customMode = false;
+let s = await chrome.storage.local.get({ provider: null, tone: null, models: {}, modelLists: {}, keys: {}, keyOk: {} });
+let editModels = false;
 let testMsg = null; // {text, ok}
 
 const save = (patch) => { Object.assign(s, patch); return chrome.storage.local.set(patch); };
 const providerId = () => (providers[s.provider] ? s.provider : providersCfg.defaultProvider);
-const modelId = () => s.models[providerId()] || providers[providerId()].models[0].id;
+const modelId = () => currentModel(providers[providerId()], providerId(), s);
 const toneId = () => (tonesCfg.tones.some((t) => t.id === s.tone) ? s.tone : tonesCfg.defaultTone);
 
 function chip(label, selected, onClick) {
@@ -25,19 +25,27 @@ function chip(label, selected, onClick) {
 
 function render() {
   const pid = providerId(), p = providers[pid], model = modelId();
-  if (!p.models.some((m) => m.id === model)) customMode = true;
+  const ids = modelList(p, pid, s);
+  const labelOf = (id) => p.models.find((m) => m.id === id)?.label || id;
 
   $("providers").replaceChildren(...Object.entries(providers).map(([id, o]) =>
-    chip(o.label.split(" ").pop(), id === pid, () => { customMode = false; testMsg = null; save({ provider: id }).then(render); })));
+    chip(o.label.split(" ").pop(), id === pid, () => { editModels = false; testMsg = null; save({ provider: id }).then(render); })));
 
+  // Edit mode: click a model to remove it (one always stays). Otherwise: click to use it.
   $("models").replaceChildren(
-    ...p.models.map((m) => chip(m.label, !customMode && m.id === model, () => {
-      customMode = false; save({ models: { ...s.models, [pid]: m.id } }).then(render);
-    })),
-    chip("Custom…", customMode, () => { customMode = true; render(); $("custom").focus(); }));
-  $("custom").hidden = !customMode;
-  $("custom").placeholder = `Model id, e.g. ${p.models[0].id}`;
-  if (customMode && document.activeElement !== $("custom")) $("custom").value = p.models.some((m) => m.id === model) ? "" : model;
+    ...ids.map((id) => {
+      const c = chip(editModels ? `${labelOf(id)}  ✕` : labelOf(id), id === model, () => {
+        if (!editModels) save({ models: { ...s.models, [pid]: id } }).then(render);
+        else if (ids.length > 1) save({ modelLists: { ...s.modelLists, [pid]: ids.filter((x) => x !== id) } }).then(render);
+      });
+      if (editModels) c.setAttribute("aria-label", `Remove ${labelOf(id)}`);
+      return c;
+    }),
+    chip(editModels ? "Done" : "Edit", false, () => { editModels = !editModels; render(); if (editModels) $("newModel").focus(); }));
+  $("modelEdit").hidden = !editModels;
+  $("newModel").placeholder = `Model id, e.g. ${p.models[0].id}`;
+  $("modelHint").textContent = `Click ✕ to remove a model, or add any ${p.label.split(" ").pop()} model id. Then press Test to check it.`;
+  $("restoreModels").parentElement.hidden = JSON.stringify(ids) === JSON.stringify(p.models.map((m) => m.id));
 
   $("keyLabel").textContent = `${p.label.split(" ").pop()} API key`;
   if (document.activeElement !== $("key")) $("key").value = s.keys[pid] || "";
@@ -50,9 +58,21 @@ function render() {
   $("tones").replaceChildren(...tonesCfg.tones.map((t) => chip(t.label, t.id === toneId(), () => save({ tone: t.id }).then(render))));
 }
 
-$("custom").addEventListener("input", (e) => {
-  const v = e.target.value.trim();
-  if (v) save({ models: { ...s.models, [providerId()]: v } });
+function addModel() {
+  const pid = providerId(), id = $("newModel").value.replace(/\s+/g, "");
+  if (!id) return;
+  $("newModel").value = "";
+  const ids = [...new Set([...modelList(providers[pid], pid, s), id])];
+  save({ modelLists: { ...s.modelLists, [pid]: ids }, models: { ...s.models, [pid]: id } }).then(render);
+}
+$("addModel").addEventListener("click", addModel);
+$("newModel").addEventListener("keydown", (e) => { if (e.key === "Enter") addModel(); });
+$("restoreModels").addEventListener("click", (e) => {
+  e.preventDefault();
+  const pid = providerId();
+  const { [pid]: _l, ...lists } = s.modelLists; const { [pid]: _m, ...models } = s.models;
+  s.modelLists = lists; s.models = models;
+  chrome.storage.local.set({ modelLists: lists, models }).then(render);
 });
 $("key").addEventListener("input", (e) => {
   const pid = providerId();

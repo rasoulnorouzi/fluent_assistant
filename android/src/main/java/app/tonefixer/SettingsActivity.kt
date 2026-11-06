@@ -27,7 +27,7 @@ class SettingsActivity : Activity() {
     private lateinit var p: Ui.Palette
     private lateinit var root: LinearLayout
     private var keyField: EditText? = null
-    private var customMode = false
+    internal var editModels = false // internal: set by the screenshot test
     private var testStatus = ""
 
     // In-app update state (PLAN.md §4.7). The section redraws on its own, so a background check
@@ -95,7 +95,7 @@ class SettingsActivity : Activity() {
     override fun onPause() { super.onPause(); saveKey() }
 
     private fun provider() = cfg.provider(prefs.provider)
-    private fun modelId(pr: Llm.Provider) = prefs.model(pr.id) ?: pr.models.first().id
+    private fun modelId(pr: Llm.Provider) = prefs.currentModel(pr)
 
     private fun saveKey() {
         val f = keyField ?: return
@@ -106,12 +106,11 @@ class SettingsActivity : Activity() {
 
     // ---------- building the screen ----------
 
-    private fun build() {
+    internal fun build() { // internal: the screenshot test redraws after changing state
         saveKey()
         root.removeAllViews()
         val pr = provider()
         val model = modelId(pr)
-        if (pr.models.none { it.id == model }) customMode = true
 
         // Header
         root.addView(LinearLayout(this).apply {
@@ -157,7 +156,7 @@ class SettingsActivity : Activity() {
             cfg.providers.values.forEach { o ->
                 addView(Ui.chip(context, p, o.label.substringAfter(' '), o.id == pr.id) {
                     saveKey(); keyField = null // the field holds the OLD provider's key
-                    prefs.provider = o.id; customMode = false; testStatus = ""; build()
+                    prefs.provider = o.id; editModels = false; testStatus = ""; build()
                 }.apply { if (!isSelected) background = Ui.ripple(Ui.round(0, dp(20).toFloat()), 0x28000000) },
                     LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
             }
@@ -165,17 +164,39 @@ class SettingsActivity : Activity() {
 
         // Model
         root.addView(label("Model"), spaced(20))
+        val ids = prefs.models(pr)
+        fun labelOf(id: String) = pr.models.firstOrNull { it.id == id }?.label ?: id
         root.addView(Ui.Flow(this, dp(6)).apply {
-            pr.models.forEach { m ->
-                addView(Ui.chip(context, p, m.label, !customMode && m.id == model) {
-                    prefs.setModel(pr.id, m.id); customMode = false; build()
-                })
+            ids.forEach { id ->
+                // Edit mode: tap ✕ to remove (one model always stays). Otherwise: tap to use it.
+                addView(Ui.chip(context, p, if (editModels) "${labelOf(id)}  ✕" else labelOf(id), id == model) {
+                    if (!editModels) prefs.setModel(pr.id, id)
+                    else if (ids.size > 1) prefs.setModels(pr, ids - id)
+                    build()
+                }.apply { contentDescription = if (editModels) "Remove ${labelOf(id)}" else labelOf(id) })
             }
-            addView(Ui.chip(context, p, "Custom…", customMode) { customMode = true; build() })
+            addView(Ui.chip(context, p, if (editModels) "Done" else "Edit", false) { editModels = !editModels; build() })
         }, spaced(8))
-        if (customMode) root.addView(field("Model id, e.g. ${pr.models.first().id}", if (pr.models.any { it.id == model }) "" else model).apply {
-            addTextChangedListener(after { s -> if (s.isNotBlank()) prefs.setModel(pr.id, s.trim()) })
-        }, spaced(8))
+        if (editModels) {
+            val add = field("Model id, e.g. ${pr.models.first().id}", "").apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            }
+            root.addView(LinearLayout(this).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(add, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                addView(Ui.button(context, p, "Add") {
+                    val id = add.text.toString().filter { !it.isWhitespace() }
+                    if (id.isNotEmpty()) { prefs.setModels(pr, (ids + id).distinct()); prefs.setModel(pr.id, id) }
+                    build()
+                }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
+            }, spaced(8))
+            val defaults = pr.models.map { it.id }
+            root.addView(small("Tap ✕ to remove a model, or add any ${pr.label.substringAfter(' ')} model id. Then press Test below to check it."), spaced(6))
+            if (ids != defaults) root.addView(small("Restore defaults ↺").apply {
+                setTextColor(p.primary); minHeight = dp(44); gravity = Gravity.CENTER_VERTICAL
+                setOnClickListener { prefs.setModels(pr, null); build() }
+            })
+        }
 
         // API key
         root.addView(label("${pr.label.substringAfter(' ')} API key"), spaced(20))

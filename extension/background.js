@@ -1,6 +1,6 @@
 // Service worker: holds the settings, makes the API calls (streaming) and sends the text back to
 // the page over a port. Pages never see the API key.
-import { buildBody, stream, cleanKey } from "./llm.js";
+import { buildBody, stream, cleanKey, currentModel } from "./llm.js";
 
 let cfgPromise = null;
 /** {tones: shared/tones.json, providers: shared/providers.json}, copied in by pack.sh. */
@@ -10,8 +10,8 @@ export function config() {
   return cfgPromise;
 }
 
-/** Stored settings: {provider, tone, models: {gemini: id}, keys: {gemini: key}}. */
-const settings = () => chrome.storage.local.get({ provider: null, tone: null, models: {}, keys: {} });
+/** Stored settings: {provider, tone, models: {gemini: picked id}, modelLists: {gemini: [ids]}, keys: {gemini: key}}. */
+const settings = () => chrome.storage.local.get({ provider: null, tone: null, models: {}, modelLists: {}, keys: {} });
 
 function pick(cfg, s) {
   const providers = cfg.providers.providers;
@@ -19,7 +19,7 @@ function pick(cfg, s) {
   const provider = providers[providerId];
   const tones = cfg.tones.tones;
   const tone = tones.find((t) => t.id === s.tone) || tones.find((t) => t.id === cfg.tones.defaultTone);
-  const model = s.models[providerId] || provider.models[0].id;
+  const model = currentModel(provider, providerId, s);
   return { providerId, provider, tone, model, key: cleanKey(s.keys[providerId]) };
 }
 

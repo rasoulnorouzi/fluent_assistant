@@ -39,6 +39,26 @@ class Prefs(ctx: Context) {
     fun model(provider: String): String? = sp.getString("model_$provider", null)
     fun setModel(provider: String, model: String) = sp.edit().putString("model_$provider", model).apply()
 
+    /**
+     * The models shown for [p]: the built-in ones until the user adds or removes some. Never empty.
+     * (A model picked with the old "Custom…" field is kept in the list.)
+     */
+    fun models(p: Llm.Provider): List<String> {
+        val saved = sp.getString("models_${p.id}", null)?.let { s ->
+            runCatching { org.json.JSONArray(s).let { a -> (0 until a.length()).map { a.getString(it) } } }.getOrNull()
+        }
+        val list = saved ?: (p.models.map { it.id } + listOfNotNull(model(p.id))).distinct()
+        return list.ifEmpty { p.models.map { it.id } }
+    }
+
+    fun setModels(p: Llm.Provider, ids: List<String>?) {
+        if (ids == null) sp.edit().remove("models_${p.id}").remove("model_${p.id}").apply() // restore defaults
+        else sp.edit().putString("models_${p.id}", org.json.JSONArray(ids).toString()).apply()
+    }
+
+    /** The model a rewrite uses: the picked one if it's still in the list, else the first. */
+    fun currentModel(p: Llm.Provider): String = models(p).let { l -> model(p.id)?.takeIf { it in l } ?: l.first() }
+
     fun key(provider: String): String? = cache.getOrPut(provider) {
         val enc = sp.getString("key_$provider", null) ?: return null
         runCatching { decrypt(enc) }.getOrNull() ?: return null

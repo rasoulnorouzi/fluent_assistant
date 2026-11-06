@@ -54,7 +54,14 @@
 
   <h2>Model</h2>
   <div class="chips" id="models"></div>
-  <input id="custom" placeholder="Model id" hidden style="margin-top:8px">
+  <div id="modelEdit" hidden>
+    <div class="row" style="margin-top:8px">
+      <input id="newModel" placeholder="Model id" autocomplete="off" spellcheck="false">
+      <button class="btn" id="addModel">Add</button>
+    </div>
+    <p class="muted" id="modelHint" style="margin:6px 0 0"></p>
+    <p class="muted" style="margin:4px 0 0"><a href="#" id="restoreModels">Restore defaults ↺</a></p>
+  </div>
 
   <h2 id="keyLabel">API key</h2>
   <div class="row">

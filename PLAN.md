@@ -125,11 +125,15 @@ examples (small fast models follow examples much better than adjectives).
 - Each model's `extra` object is **deep-merged into the request body**. That is how thinking gets
   switched off per model without any model-specific code. A new model is one JSON entry.
 - **max_tokens** = `clamp(inputChars / charsPerToken × multiplier + base, 200, cap)`. The
-  multiplier is generous because "Formal email" can turn a 5-word note into a 60-word email.
+  multiplier is generous because "Email" can turn a 5-word note into a 60-word email.
 - Model IDs were checked against current docs on 2026-11-05. Gemini 3.x uses `thinkingLevel`
   and 2.5 uses `thinkingBudget`; sending both returns a 400. Claude Haiku 5.5 has thinking on by
-  default, so it is turned off explicitly (allowed at effort `low`). The Settings screen also has
-  a "custom model id" field, so a new model can be tried without rebuilding the app.
+  default, so it is turned off explicitly (allowed at effort `low`).
+- **Model list in Settings (2026-11-06):** each provider shows its models as chips; **Edit** lets
+  you remove any of them (one always stays), add any model id, and **Restore defaults**. A model id
+  from `providers.json` keeps its `extra` (thinking off) even after being removed and added back;
+  other ids are sent without `extra`. Stored per provider (Android prefs `models_<provider>`,
+  extension `modelLists`); the picked model falls back to the first in the list if removed.
 
 ### 3.4 Request formats (full detail goes in `shared/API.md`)
 
@@ -361,7 +365,7 @@ ios/        (Phase 3, later)
 |---|---|
 | Some apps ignore `ACTION_SET_TEXT` | Clipboard + paste fallback, then "copied" message |
 | Xiaomi/OnePlus kill the service | Checklist step for battery and autostart, plus a status line in Settings |
-| A model gets renamed or retired | Edit `providers.json`, or use the custom model id field in Settings |
+| A model gets renamed or retired | Edit `providers.json`, or add/remove models in Settings → Model → Edit |
 | The model "answers" a question instead of rewriting it | Prompt says it's text written *for someone else*, plus a test case |
 | Long Farsi input → output truncated | Generous max_tokens formula, and the card shows "…cut off" if the output stops at the token limit |
 | No device in the cloud session | CI builds plus your on-device checklist, and fixes logged in CLAUDE.md |

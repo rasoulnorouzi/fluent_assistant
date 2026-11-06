@@ -22,6 +22,12 @@ class ScreenshotTest {
 
     @Test fun settingsLight() = shoot("settings-light")
 
+    @Test fun settingsEditModels() = shoot("settings-models") {
+        Prefs(this).setModels(Llm.config(this).provider("gemini"), listOf("gemini-3.5-flash-lite", "gemini-3.5-flash"))
+        editModels = true
+        build()
+    }
+
     @Test fun settingsUpdateReady() = shoot("settings-update") {
         updInfo = Update.Info(99, "0.2.99", "https://example.com/a.apk", "00", "Faster bubble, and a fix for Telegram.")
         updStatus = "Version 0.2.99 is ready."

@@ -164,3 +164,20 @@ export function keepOuterSpace(input, output) {
   const trail = input.match(/\s*$/)[0];
   return lead + output.trim() + trail; // input is never blank here, so lead and trail don't overlap
 }
+
+/**
+ * The models shown for a provider: the built-in ones until the user adds or removes some. Never
+ * empty. A model picked with the old "Custom…" field stays in the list. `s` = stored settings.
+ */
+export function modelList(provider, providerId, s) {
+  const saved = s.modelLists?.[providerId];
+  if (Array.isArray(saved) && saved.length) return saved;
+  const picked = s.models?.[providerId];
+  return [...new Set([...provider.models.map((m) => m.id), ...(picked ? [picked] : [])])];
+}
+
+/** The model a rewrite uses: the picked one if it's still in the list, else the first. */
+export function currentModel(provider, providerId, s) {
+  const list = modelList(provider, providerId, s);
+  return list.includes(s.models?.[providerId]) ? s.models[providerId] : list[0];
+}

@@ -84,7 +84,7 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
         }
         val s = snap ?: return
         val pr = cfg.provider(prefs.provider)
-        val model = prefs.model(pr.id) ?: pr.models.first().id
+        val model = prefs.currentModel(pr)
         val key = prefs.key(pr.id)
 
         call?.cancel()

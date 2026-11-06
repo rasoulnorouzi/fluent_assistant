@@ -163,3 +163,17 @@ test("stream: cancel, bad key character, no connection", async () => {
   assert.equal(bad.error, "The API key has an invalid character. Paste it again in Settings.");
   assert.equal((await llm.stream(local(gemini, closed), "m", "k", {}, never, () => {})).error, "No connection.");
 });
+
+test("model list: defaults, remove, add, fallback, old custom model kept", () => {
+  const ids = gemini.models.map((m) => m.id);
+  assert.deepEqual(llm.modelList(gemini, "gemini", {}), ids);
+  assert.equal(llm.currentModel(gemini, "gemini", {}), ids[0]);
+  const s = { models: { gemini: ids[1] }, modelLists: { gemini: [ids[0], "gemini-9-pro"] } };
+  assert.equal(llm.currentModel(gemini, "gemini", s), ids[0]); // picked one was removed
+  s.models.gemini = "gemini-9-pro";
+  assert.equal(llm.currentModel(gemini, "gemini", s), "gemini-9-pro");
+  assert.deepEqual(llm.modelList(gemini, "gemini", { modelLists: { gemini: [] } }), ids); // never empty
+  assert.deepEqual(llm.modelList(gemini, "gemini", { models: { gemini: "old-custom" } }), [...ids, "old-custom"]);
+  // A built-in model added back gets its extra settings again (thinking off).
+  assert.equal(llm.buildBody(cfg, gemini, ids[1], tone("daily"), "x").generationConfig.thinkingConfig.thinkingLevel, "minimal");
+});
