@@ -27,8 +27,12 @@ object Llm {
         /** Wraps the user's text, e.g. "<text>\n{text}\n</text>", so it's never taken as an instruction. */
         val userTemplate: String,
         val providers: Map<String, Provider>, val defaultProvider: String, val maxTokens: JSONObject,
+        /** Translate to Persian (tones.json → translate): its own instructions and modes (روان / رسمی). */
+        val translateSystem: String = "", val translateModes: List<Tone> = emptyList(), val translateDefault: String = "",
     ) {
         fun tone(id: String?) = tones.firstOrNull { it.id == id } ?: tones.first { it.id == defaultTone }
+        fun translateMode(id: String?) = translateModes.firstOrNull { it.id == id }
+            ?: translateModes.firstOrNull { it.id == translateDefault } ?: translateModes.first()
         fun provider(id: String?) = providers[id] ?: providers.getValue(defaultProvider)
     }
 
@@ -60,8 +64,13 @@ object Llm {
                 },
             )
         }
+        val tr = t.optJSONObject("translate")
+        val trModes = tr?.optJSONArray("modes")?.objects()?.map {
+            Tone(it.getString("id"), it.getString("label"), it.optString("letter"), it.getString("style"))
+        }.orEmpty()
         return Config(t.getString("system"), tones, t.getString("defaultTone"), t.optString("userTemplate", "{text}"), providers,
-            p.getString("defaultProvider"), p.getJSONObject("maxTokens"))
+            p.getString("defaultProvider"), p.getJSONObject("maxTokens"),
+            tr?.optString("system").orEmpty(), trModes, tr?.optString("defaultMode").orEmpty())
     }
 
     // ---------- Request ----------
@@ -73,9 +82,13 @@ object Llm {
     }
 
     /** Body for [provider] + [modelId]. A model id that isn't in providers.json gets no `extra`. */
-    fun buildBody(cfg: Config, provider: Provider, modelId: String, tone: Tone, text: String): JSONObject {
-        val system = cfg.system.replace("{style}", tone.style)
-        val max = maxTokens(cfg, text.length)
+    /**
+     * [translate] = use the translate-to-Persian instructions ([tone] is then a translate mode). Persian
+     * needs about twice the tokens of English for the same text, so translations get twice the room.
+     */
+    fun buildBody(cfg: Config, provider: Provider, modelId: String, tone: Tone, text: String, translate: Boolean = false): JSONObject {
+        val system = (if (translate) cfg.translateSystem else cfg.system).replace("{style}", tone.style)
+        val max = if (translate) (maxTokens(cfg, text.length) * 2).coerceAtMost(cfg.maxTokens.getInt("cap")) else maxTokens(cfg, text.length)
         @Suppress("NAME_SHADOWING") val text = cfg.userTemplate.replace("{text}", text)
         val body = when (provider.format) {
             "gemini" -> JSONObject()

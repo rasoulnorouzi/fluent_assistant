@@ -27,6 +27,26 @@
             </intent-filter>
         </activity>
 
+        <!-- "Select text → ترجمه به فارسی" in any app's text menu, and Share → Tone Fixer. No screen of its own. -->
+        <activity
+            android:name=".TranslateActivity"
+            android:exported="true"
+            android:label="ترجمه به فارسی"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:noHistory="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".ToneService"
             android:exported="false"

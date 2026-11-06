@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0–2d done except your device checks · Phase 3 (iOS): 1/7 · Phase 4 (translate): 0/6**
-**Current step:** T.1, translation prompt.
+**Progress: Phase 0–2d done except your device checks · Phase 3 (iOS): 1/7 · Phase 4 (translate): 4/6**
+**Current step:** T.5, publish Android 0.2.20 (you update inside the app).
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -74,10 +74,10 @@
 - [x] M.3 Tests + screenshots (Android 50, extension 15 + e2e 14/14); published Android 0.2.18, extension 0.2.3
 
 ## Phase 4: Translate to Persian (approved 2026-11-06; PLAN.md §10)
-- [ ] T.1 Translation prompt + modes (روان / رسمی) in shared/tones.json; Claude Sonnet 5.5 as optional model
-- [ ] T.2 Translation test set; Haiku vs Sonnet live; tune until fluent
-- [ ] T.3 Android: Persian card (RTL, source language, modes, original, copy) in the overlay
-- [ ] T.4 Android: «فارسی» and «ترجمه‌ی صفحه» in the bubble menu; select text / Share → «ترجمه به فارسی»
+- [x] T.1 Translation prompt + modes (روان / رسمی) in shared/tones.json; Claude Sonnet 5.5 as optional model
+- [x] T.2 Translation test set (18 texts, 7 languages); Haiku vs Sonnet live; prompt v2 fixed term transliteration (eigen risico → فرانشیز), short dictionary entries
+- [x] T.3 Android: Persian card (RTL, source language, modes, original, copy) in the overlay
+- [x] T.4 Android: «فارسی» and «ترجمه‌ی صفحه» in the bubble menu; select text / Share → «ترجمه به فارسی»
 - [ ] T.5 Tests + screenshots; publish 0.2.20 (first in-app update: you update from Settings)
 - [ ] T.6 Chrome: select text → Persian (menu + card)
 

@@ -32,6 +32,21 @@ class LlmTest {
         cfg.tones.forEach { assertEquals(1, it.letter.length) }
     }
 
+    @Test fun translateConfigAndBody() {
+        assertEquals(listOf("fluent", "formal"), cfg.translateModes.map { it.id })
+        assertEquals(listOf("روان", "رسمی"), cfg.translateModes.map { it.label })
+        assertEquals("fluent", cfg.translateMode(null).id)
+        assertEquals("formal", cfg.translateMode("formal").id)
+        val m = claude.models.first().id
+        val b = Llm.buildBody(cfg, claude, m, cfg.translateMode("formal"), "Hallo", translate = true)
+        val sys = b.getString("system")
+        assertTrue(sys.startsWith("You translate text into Persian"))
+        assertTrue(sys.contains("Formal (رسمی)") && !sys.contains("{style}"))
+        assertEquals("<text>\nHallo\n</text>", b.getJSONArray("messages").getJSONObject(0).getString("content"))
+        assertEquals(400, b.getInt("max_tokens")) // twice the rewrite room (Persian needs more tokens)
+        assertTrue(claude.models.any { it.id == "claude-sonnet-5-5" })
+    }
+
     @Test fun maxTokensScalesAndClamps() {
         assertEquals(200, Llm.maxTokens(cfg, 5))          // min
         assertEquals(100 * 3 + 150, Llm.maxTokens(cfg, 300)) // ceil(300/3)=100
@@ -233,6 +248,27 @@ class LlmTest {
             assertNull(out.error)
             assertEquals("done", out.stop)
             assertTrue(out.text.isNotBlank())
+        }
+    }
+
+    /** Real translation through the real code, with the language line split off. Runs only with CLAUDE_KEY set. */
+    @Test fun liveClaudeTranslate() {
+        val key = System.getenv("CLAUDE_KEY")
+        org.junit.Assume.assumeTrue(!key.isNullOrBlank())
+        for ((model, text) in listOf("claude-haiku-5-5" to "Hoi! Zin om zaterdag mee te gaan naar de markt? Ik haal je om 10 uur op.",
+                                     "claude-sonnet-5-5" to "Break a leg tonight! It's a piece of cake.")) {
+            val body = Llm.buildBody(cfg, claude, model, cfg.translateMode("fluent"), text, translate = true)
+            val split = TextOps.LanguageLine(); var lang: String? = null
+            val t0 = System.nanoTime(); var first = 0L
+            val shown = StringBuilder()
+            val out = Llm.stream(claude, model, key, body, Llm.Call()) {
+                if (first == 0L) first = System.nanoTime()
+                shown.append(split.feed(it) { l -> lang = l })
+            }
+            shown.append(split.flush())
+            println("LIVE $model: first text ${(first - t0) / 1_000_000} ms, language=$lang, error=${out.error}\n  $shown")
+            assertNull(out.error)
+            assertTrue(!lang.isNullOrBlank() && shown.isNotBlank() && !shown.startsWith("\n"))
         }
     }
 

@@ -45,6 +45,10 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         fun onPickModel(provider: String, model: String)
         /** The model line in the card was tapped: rerun with the next model. */
         fun onNextModel()
+        /** Bubble menu: translate to Persian. [screen] = what's on screen, else the text in the box. */
+        fun onTranslate(screen: Boolean)
+        /** A translate mode chip (روان / رسمی) was tapped in the Persian card. */
+        fun onPickTranslateMode(id: String)
     }
 
     /** One model the user can switch to: only services with a saved key are offered. */
@@ -263,6 +267,9 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
 
     fun setTones(t: List<Llm.Tone>) { tones = t }
 
+    private var translateModes: List<Llm.Tone> = emptyList()
+    fun setTranslateModes(m: List<Llm.Tone>) { translateModes = m }
+
     @SuppressLint("ClickableViewAccessibility")
     internal fun showMenu() { // internal: the screenshot test opens it
         hideMenu()
@@ -277,6 +284,15 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                 setTextColor(p.muted); setPadding(dp(10), dp(4), dp(10), dp(6))
             })
             tones.forEach { t -> addView(menuRow(t, t.id == current)) }
+            if (translateModes.isNotEmpty()) {
+                addView(View(ctx).apply { setBackgroundColor(p.line) }, LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(10), dp(6), dp(10), dp(4)) })
+                addView(TextView(ctx).apply {
+                    text = "PERSIAN · فارسی"; textSize = 11f; letterSpacing = 0.08f; typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(p.muted); setPadding(dp(10), dp(6), dp(10), dp(6))
+                })
+                addView(actionRow("ف", "فارسی", "Translate the text in this box") { cb.onTranslate(screen = false) })
+                addView(actionRow("⧉", "ترجمه‌ی صفحه", "Translate what's on screen") { cb.onTranslate(screen = true) })
+            }
             if (models.size > 1) {
                 addView(View(ctx).apply { setBackgroundColor(p.line) }, LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(10), dp(6), dp(10), dp(4)) })
                 addView(TextView(ctx).apply {
@@ -305,6 +321,23 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             y = (bubbleParams.y - dp(170)).coerceAtMost(screenH() - est - dp(48)).coerceAtLeast(dp(24))
         }
         runCatching { wm.addView(root, lp); menu = root }
+    }
+
+    /** A menu row that runs an action (letter circle + label), e.g. «فارسی». */
+    private fun actionRow(letter: String, label: String, description: String, onClick: () -> Unit) = LinearLayout(ctx).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = dp(44)
+        setPadding(dp(10), 0, dp(10), 0)
+        background = Ui.ripple(Ui.round(0, dp(14).toFloat()), 0x28000000)
+        addView(TextView(ctx).apply {
+            text = letter; textSize = 13f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+            setTextColor(p.clayDeep)
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(p.bg) }
+        }, LinearLayout.LayoutParams(dp(26), dp(26)))
+        addView(TextView(ctx).apply { text = label; textSize = 15f; setTextColor(p.ink); setPadding(dp(12), 0, 0, 0) })
+        isClickable = true
+        contentDescription = description
+        setOnClickListener { hideMenu(); onClick() }
     }
 
     private fun modelRow(m: ModelChoice, selected: Boolean) = LinearLayout(ctx).apply {
@@ -368,16 +401,25 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
     private lateinit var status: TextView
     private lateinit var chips: LinearLayout
     private lateinit var apply: ImageButton
+    private lateinit var copy: ImageButton
+    private lateinit var originalToggle: TextView
+    private lateinit var originalText: TextView
+    private lateinit var col: LinearLayout
     private val text = StringBuilder()
     private var streaming = false
+    /** True while the card shows a Persian translation (right-to-left, modes, copy). */
+    private var persian = false
+    private var canApply = true
 
     fun isCardShown() = cardShown
 
     /** Opens (or resets) the card for a new run. */
     fun startCard(toneId: String, fromFarsi: Boolean) {
         if (card == null) buildCard()
+        setPersian(false, original = null)
         val tone = tones.firstOrNull { it.id == toneId }
         title.text = tone?.label ?: ""
+        farsiTag.text = "from Farsi"
         farsiTag.visibility = if (fromFarsi) View.VISIBLE else View.GONE
         renderModelLine()
         text.clear(); streaming = true
@@ -386,6 +428,52 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         setApplyEnabled(false)
         fillChips(toneId)
         setState(State.WORKING)
+    }
+
+    /**
+     * Opens (or resets) the card for a translation to Persian. [apply] = the text is the user's own
+     * (✓ replaces it); otherwise only copy. [original] can be shown under the translation.
+     */
+    fun startTranslateCard(modeId: String, apply: Boolean, original: String) {
+        if (card == null) buildCard()
+        setPersian(true, original)
+        canApply = apply
+        title.text = "ترجمه به فارسی"
+        farsiTag.visibility = View.GONE // shows «از هلندی» once the model names the language
+        renderModelLine()
+        text.clear(); streaming = true
+        status.visibility = View.GONE
+        renderBody()
+        setApplyEnabled(false)
+        chips.removeAllViews()
+        translateModes.forEach { m ->
+            chips.addView(Ui.chip(ctx, p, m.label, m.id == modeId) { if (m.id != modeId) cb.onPickTranslateMode(m.id) },
+                LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(6) })
+        }
+        setState(State.WORKING)
+    }
+
+    /** The source language the model named («هلندی»). */
+    fun setSource(language: String) {
+        if (!persian || language.isBlank()) return
+        farsiTag.text = if (language == "فارسی") "متن فارسی است" else "از $language"
+        farsiTag.visibility = View.VISIBLE
+    }
+
+    private fun setPersian(on: Boolean, original: String?) {
+        persian = on
+        canApply = true
+        val dir = if (on) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
+        col.layoutDirection = dir
+        body.textDirection = if (on) View.TEXT_DIRECTION_ANY_RTL else View.TEXT_DIRECTION_FIRST_STRONG
+        body.textSize = if (on) 18f else 17f
+        body.setLineSpacing(0f, if (on) 1.15f else 1.3f) // Persian letters are taller
+        modelLine.textDirection = if (on) View.TEXT_DIRECTION_RTL else View.TEXT_DIRECTION_FIRST_STRONG
+        copy.visibility = if (on) View.VISIBLE else View.GONE
+        originalText.text = original ?: ""
+        originalText.visibility = View.GONE
+        originalToggle.text = "متن اصلی ▾"
+        originalToggle.visibility = if (on && !original.isNullOrBlank()) View.VISIBLE else View.GONE
     }
 
     fun append(piece: String) {
@@ -399,6 +487,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         renderBody()
         showStatus(note, false)
         setApplyEnabled(text.isNotBlank())
+        if (persian) copy.alpha = if (text.isNotBlank()) 1f else 0.35f
         setState(State.IDLE)
     }
 
@@ -441,7 +530,17 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         status.setTextColor(if (error) p.warn else p.muted)
     }
 
-    private fun setApplyEnabled(on: Boolean) { apply.isEnabled = on; apply.alpha = if (on) 1f else 0.35f }
+    private fun setApplyEnabled(on: Boolean) {
+        apply.visibility = if (persian && !canApply) View.GONE else View.VISIBLE
+        apply.isEnabled = on; apply.alpha = if (on) 1f else 0.35f
+    }
+
+    private fun copyResult() {
+        if (text.isBlank()) return
+        ctx.getSystemService(android.content.ClipboardManager::class.java)
+            .setPrimaryClip(android.content.ClipData.newPlainText("Tone Fixer", text.toString().trim()))
+        showStatus("کپی شد", false)
+    }
 
     private fun fillChips(currentId: String) {
         chips.removeAllViews()
@@ -474,9 +573,6 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             textSize = 17f; setTextColor(p.ink); setLineSpacing(0f, 1.3f); setTextIsSelectable(false)
             minHeight = dp(56)
         }
-        bodyScroll = object : ScrollView(ctx) {
-            override fun onMeasure(w: Int, h: Int) = super.onMeasure(w, MeasureSpec.makeMeasureSpec(maxBody, MeasureSpec.AT_MOST))
-        }.apply { addView(body) }
         status = TextView(ctx).apply { textSize = 13f; visibility = View.GONE }
         chips = LinearLayout(ctx)
         apply = ImageButton(ctx).apply {
@@ -487,7 +583,35 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             setOnClickListener { cb.onApply() }
         }
 
-        val col = LinearLayout(ctx).apply {
+        copy = ImageButton(ctx).apply {
+            setImageResource(R.drawable.ic_copy); setColorFilter(p.primary)
+            background = Ui.ripple(Ui.round(p.bg, dp(26).toFloat()), 0x28000000)
+            contentDescription = "Copy"
+            visibility = View.GONE
+            setOnClickListener { copyResult() }
+        }
+        originalText = TextView(ctx).apply {
+            textSize = 14f; setTextColor(p.muted); setLineSpacing(0f, 1.25f); visibility = View.GONE
+            textDirection = View.TEXT_DIRECTION_FIRST_STRONG
+        }
+        originalToggle = TextView(ctx).apply {
+            textSize = 13f; setTextColor(p.primary); minHeight = dp(36); gravity = Gravity.CENTER_VERTICAL
+            visibility = View.GONE
+            setOnClickListener {
+                val show = originalText.visibility != View.VISIBLE
+                originalText.visibility = if (show) View.VISIBLE else View.GONE
+                text = if (show) "متن اصلی ▴" else "متن اصلی ▾"
+            }
+        }
+        val bodyBox = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(body)
+            addView(originalText, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+        }
+        bodyScroll = object : ScrollView(ctx) {
+            override fun onMeasure(w: Int, h: Int) = super.onMeasure(w, MeasureSpec.makeMeasureSpec(maxBody, MeasureSpec.AT_MOST))
+        }.apply { addView(bodyBox) }
+        col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             background = Ui.round(p.card, dp(24).toFloat())
             elevation = dp(12).toFloat()
@@ -506,6 +630,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                 addView(close, LinearLayout.LayoutParams(dp(44), dp(44)))
             })
             addView(bodyScroll, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(2); marginEnd = dp(4) })
+            addView(originalToggle)
             addView(status, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
             addView(LinearLayout(ctx).apply {
                 gravity = Gravity.CENTER_VERTICAL
@@ -513,6 +638,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                     isHorizontalScrollBarEnabled = false
                     addView(chips)
                 }, LinearLayout.LayoutParams(0, -2, 1f))
+                addView(copy, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginStart = dp(8) })
                 addView(apply, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginStart = dp(8) })
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         }

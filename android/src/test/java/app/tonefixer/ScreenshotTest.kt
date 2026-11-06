@@ -53,8 +53,11 @@ class ScreenshotTest {
             override fun onDismiss() {}
             override fun onPickModel(provider: String, model: String) {}
             override fun onNextModel() {}
+            override fun onTranslate(screen: Boolean) {}
+            override fun onPickTranslateMode(id: String) {}
         }).apply {
             setTones(cfg.tones)
+            setTranslateModes(cfg.translateModes)
             // As if keys were saved for both services.
             val choices = listOf(
                 Overlay.ModelChoice("gemini", "gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite", "Gemini"),
@@ -83,6 +86,14 @@ class ScreenshotTest {
         startCard("daily", fromFarsi = false)
         fail("API key not accepted. Check it in Settings.", settingsLink = true)
         save(cardView()!!, "card-error-dark")
+    }
+
+    @Test fun translateCard() = overlay().run {
+        startTranslateCard("fluent", apply = false, original = "Uw eigen risico voor 2026 is €385.")
+        setSource("هلندی")
+        append("فرانشیز (eigen risico) شما برای سال ۲۰۲۶ مبلغ ۳۸۵ یورو است. این مبلغ را خودتان می‌پردازید.")
+        finish(null)
+        save(cardView()!!, "card-translate")
     }
 
     @Test fun menuWithModels() = overlay().run {
