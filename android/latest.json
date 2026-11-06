@@ -1,7 +1,7 @@
 {
-  "versionCode": 18,
-  "versionName": "0.2.18",
-  "apk": "ToneFixer-0.2.18.apk",
-  "sha256": "448b85e10fc43ef5550aad43a25fa767ba2bdbd4ff7a330d4a1e1b8b8785ce78",
-  "notes": "Choose the model from the bubble (hold it); the result card shows which model wrote it."
+  "versionCode": 19,
+  "versionName": "0.2.19",
+  "apk": "ToneFixer-0.2.19.apk",
+  "sha256": "3514b8b093f776795173d591c2baaf0d6de6d28f2b8f40cc73703f5a410ce489",
+  "notes": "More reliable in-app updates on Android 14 and newer."
 }
