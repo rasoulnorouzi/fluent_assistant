@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 2b (quality): 6/6 · Phase 2c (off switch): 4/4 · Phase 2d (model choice): 3/3 (100%) · Phase 3: 1/7**
-**Current step:** Mehrnaz builds the iPhone shortcuts from ios/SHORTCUT.md. Still open: next in-app update (U.5), real sites (2.10), phone test (1.16).
+**Progress: Phase 0–2d done except your device checks · Phase 3 (iOS): 1/7 · Phase 4 (translate): 0/6**
+**Current step:** T.1, translation prompt.
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -72,6 +72,14 @@
 - [x] M.1 Android: MODEL section in the bubble menu (models of every service with a saved key); card shows the model, tap = rerun with the next one; "Now using" in Settings
 - [x] M.2 Extension: the same (right-click menu, card, settings)
 - [x] M.3 Tests + screenshots (Android 50, extension 15 + e2e 14/14); published Android 0.2.18, extension 0.2.3
+
+## Phase 4: Translate to Persian (approved 2026-11-06; PLAN.md §10)
+- [ ] T.1 Translation prompt + modes (روان / رسمی) in shared/tones.json; Claude Sonnet 5.5 as optional model
+- [ ] T.2 Translation test set; Haiku vs Sonnet live; tune until fluent
+- [ ] T.3 Android: Persian card (RTL, source language, modes, original, copy) in the overlay
+- [ ] T.4 Android: «فارسی» and «ترجمه‌ی صفحه» in the bubble menu; select text / Share → «ترجمه به فارسی»
+- [ ] T.5 Tests + screenshots; publish 0.2.20 (first in-app update: you update from Settings)
+- [ ] T.6 Chrome: select text → Persian (menu + card)
 
 ## Phase 3: iOS (planned)
 - [x] 3.1 `ios/SHORTCUT.md`: two shortcuts (Tone Fixer = Daily tone, Persian meaning), Share menu / AssistiveTouch / Back Tap; request tested live on Claude Haiku 5.5 (0.7–0.8 s)
