@@ -1,7 +1,7 @@
 {
-  "versionCode": 14,
-  "versionName": "0.2.14",
-  "apk": "ToneFixer-0.2.14.apk",
-  "sha256": "037c65d33855f00a59662604d2289e7b596123cf8403436a1d5cea18428f06c8",
-  "notes": "New and better tones (Polite, Firm; no more [Your Name]), and you can add or remove models."
+  "versionCode": 15,
+  "versionName": "0.2.15",
+  "apk": "ToneFixer-0.2.15.apk",
+  "sha256": "5aeeba8fb4623115d91d876e1b9b1307cb68a42a7a62c4bffb60d47e839917f9",
+  "notes": "Clear message when the free daily limit is reached, with a tip to switch model."
 }
