@@ -375,3 +375,41 @@ ios/        (Phase 3, later)
 1. Is "Daily" as defined in §3.2 what you meant?
 2. Should the repo stay private? (It will contain no keys either way, because keys live only on the phones.)
 3. Do you want a GitHub Release per version, so the APK is downloadable on the phone, or are Actions artifacts enough?
+
+## 10. Subscription with your own Claude key (Phase 4, DRAFT, waiting for approval)
+
+**Why:** you pay for Claude; users pay you a monthly subscription; nobody needs their own API key.
+
+**Cost check (Claude Haiku 5.5: $0.10 / $0.50 per million input / output tokens):** one rewrite ≈ 550
+input + 100 output tokens ≈ **$0.0001**. 3,000 rewrites a month ≈ $0.30. Prompt caching doesn't apply
+(our prompt is just under Haiku 5.5's 512-token minimum, and differs per tone), and isn't needed.
+
+**Server: one Cloudflare Worker** (`server/`, plain JavaScript, no npm packages; deployed with `wrangler`).
+- `POST /v1/rewrite` with `{tone, text}` and the user's session token. The Worker builds the Claude
+  request itself from `shared/tones.json` (so nobody can use your key for anything else), calls Claude
+  Haiku 5.5 with your key, and streams the answer straight back (same SSE format the apps already read).
+- Checks on every request: valid session, subscription active, monthly allowance (e.g. 3,000
+  rewrites), a per-minute limit, and a maximum text length. Counters in Workers KV.
+- Your Claude key is a Worker **secret** you paste in the Cloudflare dashboard: never in the repo,
+  the apps or the chat. Set a monthly spending limit in the Anthropic Console as a safety net.
+- Privacy: the Worker never stores or logs the text; only counters and subscription state.
+
+**Who can use it:**
+- **4a. Invite codes (first, for you two):** a code you enter once in Settings gives a session.
+  Works on the phone and in Chrome right away, before anything is on the Play Store.
+- **4b. Google Play subscription (Android, Play version):** Google Play Billing (Google requires its
+  billing library, the one exception to "no third-party libraries"). The app sends the purchase token
+  to the Worker, which checks it with Google's Play Developer API and issues a session. Free trial
+  possible (set in Play Console). Play takes 15% of subscriptions.
+- **4c. Chrome subscribers (later, optional):** the Chrome Web Store has no payments, so this needs
+  Stripe and an email sign-in. Only if there's demand.
+
+**In the apps:** a new provider "Tone Fixer" next to Gemini and Claude (your own keys stay for
+personal use). The Play version (separate build) shows only the subscription, has no self-updater,
+adds the Accessibility disclosure, the "Select text → Tone Fixer" menu and a Report button (§ Play
+requirements in chat, 2026-11-06).
+
+**What you'll need to set up (I'll give step-by-step instructions):** a Cloudflare account (free),
+an Anthropic API key with a spending limit, and later the Play Console account ($25), a payments
+profile, and a Google Cloud service account so the Worker can check purchases.
+

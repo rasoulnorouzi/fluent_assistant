@@ -73,6 +73,15 @@
 - [x] M.2 Extension: the same (right-click menu, card, settings)
 - [x] M.3 Tests + screenshots (Android 50, extension 15 + e2e 14/14); published Android 0.2.18, extension 0.2.3
 
+## Phase 4: Subscription with your Claude key (DRAFT, waiting for approval; PLAN.md §10)
+- [ ] 4.1 Cloudflare Worker: /v1/rewrite (prompt built server-side, streams Claude Haiku 5.5), limits, KV counters
+- [ ] 4.2 Invite codes → session tokens; "Tone Fixer" provider in Android + extension (you two use it first)
+- [ ] 4.3 Deploy guide + your setup (Cloudflare account, Claude key as secret, spending limit)
+- [ ] 4.4 Play version build: no updater, Accessibility disclosure, "Select text → Tone Fixer", Report button
+- [ ] 4.5 Google Play subscription: Billing in the app, purchase check in the Worker, free trial
+- [ ] 4.6 Privacy policy page, Data safety, 12-tester closed test, store listing
+- [ ] 4.7 (Optional) Chrome subscribers via Stripe
+
 ## Phase 3: iOS (planned)
 - [ ] 3.1 `ios/SHORTCUT.md`: Back Tap shortcut, step by step (interim solution)
 - [ ] 3.2 Decide: free Apple ID (7-day re-sign) or paid account, before building the keyboard
