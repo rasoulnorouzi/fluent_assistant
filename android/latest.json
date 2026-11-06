@@ -1,7 +1,7 @@
 {
-  "versionCode": 15,
-  "versionName": "0.2.15",
-  "apk": "ToneFixer-0.2.15.apk",
-  "sha256": "5aeeba8fb4623115d91d876e1b9b1307cb68a42a7a62c4bffb60d47e839917f9",
-  "notes": "Clear message when the free daily limit is reached, with a tip to switch model."
+  "versionCode": 16,
+  "versionName": "0.2.16",
+  "apk": "ToneFixer-0.2.16.apk",
+  "sha256": "43ee132c768b131f7a6c3f76ae4ba15d589262b592b43d8a4497124d896980f4",
+  "notes": "Drag the bubble to \u2715 to turn it off (opening the app turns it back on), smaller bubble, Uninstall button."
 }
