@@ -1,5 +1,5 @@
 {
-  "version": "0.2.2",
-  "zip": "tone-fixer-extension-0.2.2.zip",
-  "notes": "Hide on this site; bubble a bit more visible."
+  "version": "0.2.3",
+  "zip": "tone-fixer-extension-0.2.3.zip",
+  "notes": "Choose the model from the bubble; the card shows which model wrote it."
 }
