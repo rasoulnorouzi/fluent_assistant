@@ -198,6 +198,39 @@ function mockServer() {
     assert.equal(await page.inputValue("#in"), "Hi! thx for help");
   });
 
+  await check("bubble sits outside the box; drag moves it (remembered); Move back to default", async () => {
+    const overlaps = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+    await page.fill("#ta", "some text");
+    await page.click("#ta");
+    await bubble.waitFor({ state: "visible" });
+    let b = await bubble.boundingBox(); const t = await page.locator("#ta").boundingBox();
+    assert.ok(!overlaps(b, t), "bubble must not cover the box");
+    assert.ok(b.y + b.height <= t.y + 1, "default spot: above the box");
+    await shot("ext-bubble-outside");
+    // Drag it to the left of the box.
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width / 2 - 300, b.y + b.height / 2 + 60, { steps: 8 }); // 300 left, 60 down
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    assert.equal(await ui.locator(".card").isVisible(), false, "a drag is not a click");
+    const moved = await bubble.boundingBox();
+    assert.ok(Math.abs(moved.x - (b.x - 300)) < 3, `moved to ${JSON.stringify(moved)} from ${JSON.stringify(b)}`);
+    // Leave the box and come back: same spot.
+    await page.click("h3 >> nth=0");
+    await page.click("#ta");
+    await page.waitForTimeout(200);
+    const again = await bubble.boundingBox();
+    assert.ok(Math.abs(again.x - moved.x) < 3 && Math.abs(again.y - moved.y) < 3, "remembered");
+    assert.ok(await sw.evaluate(() => chrome.storage.local.get("bubblePos").then((s) => !!s.bubblePos["127.0.0.1"])));
+    // Reset from the menu.
+    await bubble.click({ button: "right" });
+    await ui.locator(".row.off", { hasText: "Move back to default" }).click();
+    await page.waitForTimeout(200);
+    b = await bubble.boundingBox();
+    assert.ok(b.y + b.height <= t.y + 1, "back above the box");
+  });
+
   await check("rich editor: text replaced, signature kept, Ctrl+Z works", async () => {
     await page.click("#rich div >> nth=0");
     await bubble.waitFor({ state: "visible" });
@@ -247,7 +280,7 @@ function mockServer() {
   await check("Hide on this site → gone here; settings → Show again → back", async () => {
     await page.click("#ta");
     await bubble.click({ button: "right" });
-    await ui.locator(".row.off").click();
+    await ui.locator(".row.off", { hasText: "Hide on this site" }).click();
     await page.click("#ta"); await page.keyboard.type(" x");
     await page.waitForTimeout(300);
     assert.equal(await bubble.isVisible(), false);

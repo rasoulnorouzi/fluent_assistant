@@ -79,6 +79,7 @@
       if (c.tone) { tone = c.tone.newValue; ui && setLetter(); }
       if (c.provider || c.models || c.keys || c.modelLists) loadState(); // model list or choice changed
       if (c.hiddenSites) { hiddenHere = (c.hiddenSites.newValue || []).includes(SITE); schedule(); }
+      if (c.bubblePos) { positions = c.bubblePos.newValue || {}; schedule(); }
     });
   } catch { /* old script after a reload */ }
 
@@ -92,6 +93,24 @@
   let hiddenHere = false;
   try { chrome.storage.local.get({ hiddenSites: [] }).then((s) => { hiddenHere = s.hiddenSites.includes(SITE); schedule(); }); }
   catch { /* old script after a reload */ }
+
+  // Where the user dragged the bubble, per site: offset from the box's top-right corner.
+  let positions = {};
+  try { chrome.storage.local.get({ bubblePos: {} }).then((s) => { positions = s.bubblePos; schedule(); }); } catch { /* old script */ }
+
+  async function savePosition() {
+    if (!field) return;
+    const r = field.getBoundingClientRect(), b = ui.bubble.getBoundingClientRect();
+    positions = { ...positions, [SITE]: { dx: Math.round(b.left - r.right), dy: Math.round(b.top - r.top) } };
+    try { await chrome.storage.local.set({ bubblePos: positions }); } catch { /* old script */ }
+  }
+
+  async function resetPosition() {
+    const { [SITE]: _gone, ...rest } = positions;
+    positions = rest;
+    try { await chrome.storage.local.set({ bubblePos: rest }); } catch { /* old script */ }
+    schedule();
+  }
 
   async function hideOnThisSite() {
     hiddenHere = true;
@@ -123,6 +142,7 @@
             transition: opacity .15s, transform .15s; touch-action: none; }
   .bubble:hover, .bubble.on { opacity: 1; }
   .bubble:active { transform: scale(.94); }
+  .bubble.dragging { opacity: 1; cursor: grabbing; transform: scale(1.06); transition: none; }
   .badge { position: absolute; top: -5px; right: -6px; min-width: 17px; height: 17px; border-radius: 9px;
            background: var(--clay-deep); color: #FBF8F1; font: 700 10px/17px system-ui, sans-serif; text-align: center;
            padding: 0 4px; box-shadow: 0 0 0 2px var(--card); }
@@ -195,20 +215,36 @@
 
     const badge = h("span", { class: "badge" });
     const bubble = h("button", { class: "bubble", hidden: true, "aria-label": "Tone Fixer: rewrite (hold for tones)",
-      title: "Tone Fixer · click: rewrite · right-click: pick a tone" }, icon(WAVE, 22), badge);
-    let holdTimer = 0, held = false;
+      title: "Tone Fixer · click: rewrite · right-click: pick a tone · drag: move it" }, icon(WAVE, 22), badge);
+    // Click = rewrite, hold = menu, drag = move (the spot is remembered for this site).
+    let holdTimer = 0, held = false, drag = null;
     bubble.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       if (e.button !== 0) return;
       held = false;
-      holdTimer = setTimeout(() => { held = true; showMenu(); }, 450);
+      const r = bubble.getBoundingClientRect();
+      drag = { x0: e.clientX, y0: e.clientY, left: r.left, top: r.top, moved: false };
+      bubble.setPointerCapture(e.pointerId);
+      holdTimer = setTimeout(() => { if (!drag?.moved) { held = true; showMenu(); } }, 450);
+    });
+    bubble.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+      if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+      if (!drag.moved) { drag.moved = true; clearTimeout(holdTimer); hideMenu(); bubble.classList.add("dragging"); }
+      const vw = document.documentElement.clientWidth, vh = window.innerHeight;
+      bubble.style.left = `${Math.min(Math.max(2, drag.left + dx), vw - 36)}px`;
+      bubble.style.top = `${Math.min(Math.max(2, drag.top + dy), vh - 36)}px`;
     });
     bubble.addEventListener("pointerup", (e) => {
       if (e.button !== 0) return;
       clearTimeout(holdTimer);
+      const d = drag; drag = null;
+      bubble.classList.remove("dragging");
+      if (d?.moved) { savePosition(); return; }
       if (!held) { hideMenu(); run(tone, true); }
     });
-    bubble.addEventListener("pointerleave", () => clearTimeout(holdTimer));
+    bubble.addEventListener("pointercancel", () => { clearTimeout(holdTimer); drag = null; bubble.classList.remove("dragging"); });
     bubble.addEventListener("contextmenu", (e) => { e.preventDefault(); showMenu(); });
     bubble.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); run(tone, true); } });
 
@@ -257,15 +293,25 @@
     const r = field.getBoundingClientRect();
     const vw = document.documentElement.clientWidth, vh = window.innerHeight;
     if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw || r.width === 0) { b.hidden = true; return; }
+    if (b.classList.contains("dragging")) return; // the user is moving it
     const S = 34, pad = 6;
-    let x, y;
-    if (r.height < 46 && r.right + pad + S <= vw) { // one-line box: sit just outside its right edge
-      x = r.right + pad; y = r.top + (r.height - S) / 2;
-    } else { // inside the bottom-right corner of the visible part
-      x = Math.min(r.right, vw) - S - pad; y = Math.min(r.bottom, vh) - S - pad;
+    const fits = ([x, y]) => x >= 2 && y >= 2 && x + S <= vw - 2 && y + S <= vh - 2;
+    const saved = positions[SITE];
+    let spot;
+    if (saved) { // where the user dragged it, relative to the box's top-right corner
+      spot = [Math.min(Math.max(2, r.right + saved.dx), vw - S - 2), Math.min(Math.max(2, r.top + saved.dy), vh - S - 2)];
+    } else {
+      // Never on the text: outside the box first (one-line boxes: to the right; others: above the
+      // top-right corner, then below, then beside), and only inside its corner as a last resort.
+      const right = [r.right + pad, r.top + (r.height - S) / 2];
+      const above = [r.right - S, r.top - S - pad];
+      const below = [r.right - S, r.bottom + pad];
+      const beside = [r.right + pad, r.top];
+      const inside = [Math.min(r.right, vw) - S - pad, Math.min(r.bottom, vh) - S - pad];
+      spot = (r.height < 46 ? [right, above, below] : [above, below, beside]).find(fits) || inside;
     }
-    b.style.left = `${Math.max(4, x)}px`;
-    b.style.top = `${Math.max(4, y)}px`;
+    b.style.left = `${Math.max(2, spot[0])}px`;
+    b.style.top = `${Math.max(2, spot[1])}px`;
     b.hidden = false;
     if (!ui.menu.hidden) placeMenu();
     if (cardOpen()) placeCard();
@@ -354,7 +400,10 @@
         } }, h("span", { class: "dot" }), h("span", { class: "two" }, h("span", {}, x.label), h("small", {}, x.service))));
       }
     }
-    m.append(h("div", { class: "sep" }),
+    m.append(h("div", { class: "sep" }));
+    if (positions[SITE]) m.append(h("button", { class: "row off", role: "menuitem", onclick: () => { hideMenu(); resetPosition(); } },
+      h("span", { class: "letter" }, icon(WAVE, 14)), h("span", {}, "Move back to default")));
+    m.append(
       h("button", { class: "row off", role: "menuitem", title: "Bring it back in Tone Fixer settings", onclick: () => { hideMenu(); hideOnThisSite(); } },
         h("span", { class: "letter" }, icon(CLOSE, 14)), h("span", {}, "Hide on this site")));
     m.hidden = false;

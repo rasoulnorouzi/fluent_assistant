@@ -57,7 +57,8 @@ form), type, and a small sage bubble appears at its corner.
 3. The settings page opens: paste your Gemini or Claude key, tap **Test**, pick a tone.
 4. Optional: pin it (puzzle icon → pin) so the icon opens the settings in one click.
 
-**Using it:** click the bubble = rewrite with the current tone. Right-click or hold it = pick
+**Using it:** the bubble sits just outside the box you're typing in (never on your text); drag it anywhere
+you like and it stays there on that site (right-click → Move back to default to undo). Click the bubble = rewrite with the current tone. Right-click or hold it = pick
 another tone. The result appears in a card; ✓ replaces your text (Ctrl+Z undoes it), ✕ or Esc
 cancels. If you select part of the text first, only that part is rewritten. To keep the bubble away from a site, right-click it → **Hide on this site** (bring it back in
 the extension's settings → Hidden on these sites). In Gmail, your
