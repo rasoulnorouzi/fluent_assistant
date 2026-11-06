@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 0/10 · Phase 3: 0/7**
-**Current step:** U.5, you install 0.2.12 (uninstall the old test app first), then update to 0.2.13 from Settings → About & updates. Meanwhile: Phase 2.1 (extension scaffold). 1.16 (your phone test) still open.
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 3/10 · Phase 3: 0/7**
+**Current step:** 2.4, `content.js` (bubble on focused text boxes). Waiting on you: U.5 (install 0.2.12, update to 0.2.13) and 1.16 (phone test).
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -43,9 +43,9 @@
 - [ ] U.5 Unit tests + screenshot; publish a 2nd version and update to it (you, on the phone)
 
 ## Phase 2: Browser extension (Chrome, PLAN.md §5, waiting for approval)
-- [ ] 2.1 `extension/` scaffold: MV3 manifest, icons, `pack.sh` (copies shared JSON, makes the zip)
-- [ ] 2.2 `background.js`: streaming fetch + SSE parsing for both providers, pre-warm
-- [ ] 2.3 Node tests for request bodies and parsing (same recorded streams as Android)
+- [x] 2.1 `extension/` scaffold: MV3 manifest, icons, `pack.sh` (copies shared JSON, makes the zip)
+- [x] 2.2 `background.js`: streaming fetch + SSE parsing for both providers, pre-warm
+- [x] 2.3 Node tests for request bodies and parsing (same recorded streams as Android): `node --test extension/test/*.test.mjs`, 12 pass
 - [ ] 2.4 `content.js`: focus detection, bubble in Shadow DOM, Alt+Shift+F shortcut
 - [ ] 2.5 Preview card + tone menu (same design as Android, light/dark)
 - [ ] 2.6 Apply: textarea/input (native setter + input event), contenteditable (insertText), copy fallback
