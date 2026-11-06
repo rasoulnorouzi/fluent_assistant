@@ -31,6 +31,8 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Apply = ACTION_SET_TEXT on the whole field (selection spliced in), verified by re-reading the node; fallback = clipboard + select range + ACTION_PASTE; last resort = "copied, paste it" message. The user's leading/trailing whitespace is kept.
 - 2026-11-06 Tone chips in the card rerun on the same text read at the tap; picking from the long-press menu reads the field fresh.
 - 2026-11-06 Brand: adaptive launcher icon (vector, with monochrome layer for themed icons). Title font = Fraunces SOFT 100 / wght 600, downloaded from Google Fonts with `&text=Tone Fixer`, so it's a 3.8 KB file with only those letters (OFL licence). Body text = system sans.
+- 2026-11-06 Release signing: env vars TF_KEYSTORE_FILE/PASSWORD, TF_KEY_ALIAS/PASSWORD (or android/keystore.properties locally). CI decodes secret TF_KEYSTORE_BASE64. versionCode = GITHUB_RUN_NUMBER; v* tags attach the APK to a GitHub Release. Release APK ≈ 106 KB (R8 on).
+- 2026-11-06 The repo is PUBLIC: never commit keys or keystores (.gitignore blocks *.jks, *.keystore, *.key, keystore.properties).
 
 ## Preferences
 - 2026-11-05 Speed is the top priority (direct API calls, streaming, pre-warm, thinking off, short fixed prompt).
@@ -52,6 +54,8 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Error text used clay-deep, which is unreadable on the dark card. Fix: palette.warn (#E7A285 in dark).
 - 2026-11-06 Google Fonts css2 returns EOT for an old-IE user agent; plain curl gets TrueType. `file` calls a TTF "SIMH tape data"; check that the first bytes are 00010000.
 - 2026-11-06 Rendering an AdaptiveIconDrawable: its bounds = the visible (masked) area; the layers are drawn 1.5× bigger. Clip to the full bounds, not to the inner third.
+- 2026-11-06 In build.gradle.kts, `java.util.Properties()` inside `android { }` fails ("Unresolved reference util") because `java` means the Java extension there. Fix: `import java.util.Properties` at the top.
+- 2026-11-06 Android 13+ only shows ⋮ → "Allow restricted settings" AFTER the user has tried to enable the accessibility service once and seen the "Restricted setting" dialog. README and in-app hint explain that order.
 
 ## Facts learned (API)
 - 2026-11-05 Claude Haiku 5.5 = `claude-haiku-5-5`; thinking is ON by default; `thinking:{type:"disabled"}` is allowed at effort low/medium/high; `temperature/top_p/top_k` are rejected on API version `2026-10-21`. Browser calls need header `anthropic-dangerous-direct-browser-access: true`.

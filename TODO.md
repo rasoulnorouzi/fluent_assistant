@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 13/16 (81%) · Phase 2: 0/8 · Phase 3: 0/7**
-**Current step:** 1.15, signed release builds + install guide (1.2 waits on you: GitHub didn't start the CI job, see the run page)
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 2: 0/8 · Phase 3: 0/7**
+**Current step:** 1.16, on-device test by you (after CI runs: see 1.2) (1.2 waits on you: GitHub didn't start the CI job, see the run page)
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -26,7 +26,7 @@
 - [x] 1.12 ✓ Apply: `ACTION_SET_TEXT` + cursor placement + clipboard/paste fallback
 - [x] 1.13 Connection pre-warm on focus (60 s throttle)
 - [x] 1.14 Brand pass: adaptive app icon, font, colours, dark mode
-- [ ] 1.15 Signed release builds in CI (keystore secrets; you add them) + README install guide
+- [x] 1.15 Signed release builds in CI (keystore secrets; you add them) + README install guide (release APK = 106 KB; secrets still to be added by you)
 - [ ] 1.16 On-device test pass by you (checklist below) + fixes
 
 ### On-device checklist (1.16)

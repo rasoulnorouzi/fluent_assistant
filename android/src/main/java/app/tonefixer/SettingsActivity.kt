@@ -104,8 +104,9 @@ class SettingsActivity : Activity() {
         card.addView(label("Setup · ${steps.count { it.second }} of ${steps.size} done"))
         steps.forEach { (title, done, action) -> card.addView(stepRow(title, done, action)) }
         if (Build.VERSION.SDK_INT >= 33 && !accessibilityOn()) card.addView(small(
-            "Android blocks Accessibility for apps installed outside the Play Store until you allow it: " +
-            "tap Open, then ⋮ (top right) → Allow restricted settings. Then turn on Tone Fixer in Accessibility."))
+            "Android blocks Accessibility for apps installed outside the Play Store. First try to turn on " +
+            "Tone Fixer in Accessibility (Android will say \"Restricted setting\"). Then come back, tap Open next to " +
+            "\"Allow restricted settings\", tap ⋮ (top right) → Allow restricted settings, and turn it on again."))
         if (Build.MANUFACTURER.lowercase() in setOf("xiaomi", "redmi", "poco", "oneplus", "oppo", "realme", "vivo")) card.addView(
             stepRow("${Build.MANUFACTURER}: allow Autostart / no battery limits", null) {
                 open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
