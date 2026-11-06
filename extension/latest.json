@@ -1,5 +1,5 @@
 {
-  "version": "0.2.3",
-  "zip": "tone-fixer-extension-0.2.3.zip",
-  "notes": "Choose the model from the bubble; the card shows which model wrote it."
+  "version": "0.2.4",
+  "zip": "tone-fixer-extension-0.2.4.zip",
+  "notes": "The bubble no longer covers the typing bar: it sits outside the box, and you can drag it anywhere."
 }
