@@ -50,7 +50,18 @@ class ScreenshotTest {
             override fun onCancel() {}
             override fun onOpenSettings() {}
             override fun onDismiss() {}
-        }).apply { setTones(cfg.tones) }
+            override fun onPickModel(provider: String, model: String) {}
+            override fun onNextModel() {}
+        }).apply {
+            setTones(cfg.tones)
+            // As if keys were saved for both services.
+            val choices = listOf(
+                Overlay.ModelChoice("gemini", "gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite", "Gemini"),
+                Overlay.ModelChoice("gemini", "gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite", "Gemini"),
+                Overlay.ModelChoice("claude", "claude-haiku-5-5", "Claude Haiku 5.5", "Claude"),
+            )
+            setModels(choices, choices[2])
+        }
     }
 
     @Test fun cardStreaming() = overlay().run {
@@ -71,6 +82,12 @@ class ScreenshotTest {
         startCard("daily", fromFarsi = false)
         fail("API key not accepted. Check it in Settings.", settingsLink = true)
         save(cardView()!!, "card-error-dark")
+    }
+
+    @Test fun menuWithModels() = overlay().run {
+        showBubble("P")
+        showMenu()
+        save(menuView()!!, "menu-models")
     }
 
     @Test fun bubbleAndMenu() = overlay().run {
@@ -111,7 +128,13 @@ class ScreenshotTest {
     /** Lays out a detached view at phone width and saves it. */
     private fun save(v: View, name: String) {
         val w = 784
-        v.measure(View.MeasureSpec.makeMeasureSpec(if (v.layoutParams?.width == -1 || v.layoutParams == null) w else v.layoutParams.width, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
+        val lw = v.layoutParams?.width
+        val spec = when {
+            lw == null || lw == -1 -> View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY)
+            lw == -2 -> View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.AT_MOST) // wrap content
+            else -> View.MeasureSpec.makeMeasureSpec(lw, View.MeasureSpec.EXACTLY)
+        }
+        v.measure(spec, View.MeasureSpec.UNSPECIFIED)
         v.layout(0, 0, v.measuredWidth, v.measuredHeight)
         val bmp = Bitmap.createBitmap(v.measuredWidth, v.measuredHeight, Bitmap.Config.ARGB_8888)
         Canvas(bmp).apply { drawColor(0xFFDDDAD2.toInt()) ; v.draw(this) }

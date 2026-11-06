@@ -138,6 +138,20 @@ class SettingsActivity : Activity() {
                 open(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
             })
         }
+        // Which service and model a tap on the bubble uses right now.
+        val usingLabel = pr.models.firstOrNull { it.id == model }?.label ?: model
+        val withKeys = cfg.providers.values.filter { prefs.key(it.id) != null }.map { it.label.substringAfter(' ') }
+        root.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Ui.round(p.card, dp(16).toFloat())
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            addView(text("Now using: $usingLabel", 15f, p.ink).apply { typeface = Typeface.DEFAULT_BOLD })
+            addView(small(when {
+                withKeys.size > 1 -> "Keys saved for ${withKeys.joinToString(" and ")}. Hold the bubble to switch model, or tap the model name in the result card."
+                withKeys.isEmpty() -> "No API key yet: add one below."
+                else -> "Key saved for ${withKeys.first()}. Add a key for another service to switch between them from the bubble."
+            }), spaced(2))
+        }, spaced(16))
         if (bubbleBack) root.addView(small("The bubble is back on. Drag it to ✕ at the bottom of the screen to turn it off again.").apply {
             setTextColor(p.primary)
         }, spaced(12))

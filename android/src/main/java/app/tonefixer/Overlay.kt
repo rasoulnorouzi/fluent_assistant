@@ -41,6 +41,21 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         fun onOpenSettings()
         /** The bubble was dropped on ✕: turn it off until the app is opened again. */
         fun onDismiss()
+        /** A model was picked in the bubble menu. */
+        fun onPickModel(provider: String, model: String)
+        /** The model line in the card was tapped: rerun with the next model. */
+        fun onNextModel()
+    }
+
+    /** One model the user can switch to: only services with a saved key are offered. */
+    class ModelChoice(val provider: String, val model: String, val label: String, val service: String)
+
+    private var models: List<ModelChoice> = emptyList()
+    private var current: ModelChoice? = null
+
+    fun setModels(list: List<ModelChoice>, now: ModelChoice?) {
+        models = list; current = now
+        if (card != null) renderModelLine()
     }
 
     private val wm = ctx.getSystemService(WindowManager::class.java)
@@ -249,7 +264,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
     fun setTones(t: List<Llm.Tone>) { tones = t }
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun showMenu() {
+    internal fun showMenu() { // internal: the screenshot test opens it
         hideMenu()
         val current = prefs.tone
         val list = LinearLayout(ctx).apply {
@@ -262,10 +277,22 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                 setTextColor(p.muted); setPadding(dp(10), dp(4), dp(10), dp(6))
             })
             tones.forEach { t -> addView(menuRow(t, t.id == current)) }
+            if (models.size > 1) {
+                addView(View(ctx).apply { setBackgroundColor(p.line) }, LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(10), dp(6), dp(10), dp(4)) })
+                addView(TextView(ctx).apply {
+                    text = "MODEL"; textSize = 11f; letterSpacing = 0.08f; typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(p.muted); setPadding(dp(10), dp(6), dp(10), dp(6))
+                })
+                models.forEach { m -> addView(modelRow(m, m.provider == this@Overlay.current?.provider && m.model == this@Overlay.current?.model)) }
+            }
         }
+        val maxH = (screenH() * 0.75f).toInt()
+        val scroll = object : ScrollView(ctx) {
+            override fun onMeasure(w: Int, h: Int) = super.onMeasure(w, MeasureSpec.makeMeasureSpec(maxH, MeasureSpec.AT_MOST))
+        }.apply { isVerticalScrollBarEnabled = false; addView(list) }
         val root = FrameLayout(ctx).apply {
             setPadding(dp(12), dp(12), dp(12), dp(12))
-            addView(list, FrameLayout.LayoutParams(dp(200), -2))
+            addView(scroll, FrameLayout.LayoutParams(dp(220), -2))
             setOnTouchListener { _, e -> if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) hideMenu(); false }
         }
         val lp = params(-2, -2).apply {
@@ -273,9 +300,37 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             gravity = Gravity.TOP or if (prefs.bubbleRight) Gravity.END else Gravity.START
             flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
             x = margin + win - dp(4)
-            y = (bubbleParams.y - dp(170)).coerceAtLeast(dp(24))
+            // Roughly the menu's height, so it doesn't run off the bottom of the screen.
+            val est = minOf(maxH, dp(60 + 44 * tones.size + if (models.size > 1) 60 + 44 * models.size else 0))
+            y = (bubbleParams.y - dp(170)).coerceAtMost(screenH() - est - dp(48)).coerceAtLeast(dp(24))
         }
         runCatching { wm.addView(root, lp); menu = root }
+    }
+
+    private fun modelRow(m: ModelChoice, selected: Boolean) = LinearLayout(ctx).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = dp(44)
+        setPadding(dp(10), 0, dp(10), 0)
+        background = Ui.ripple(Ui.round(if (selected) p.primary else 0, dp(14).toFloat()), 0x28000000)
+        addView(View(ctx).apply { // a dot: filled = in use
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                if (selected) setColor(p.onPrimary) else setStroke(dp(2), p.muted)
+            }
+        }, LinearLayout.LayoutParams(dp(12), dp(12)).apply { setMargins(dp(7), 0, dp(7), 0) })
+        addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(6), 0, dp(6))
+            addView(TextView(ctx).apply {
+                text = m.label; textSize = 14f
+                setTextColor(if (selected) p.onPrimary else p.ink)
+                if (selected) typeface = Typeface.DEFAULT_BOLD
+            })
+            addView(TextView(ctx).apply { text = m.service; textSize = 11f; setTextColor(if (selected) p.onPrimary else p.muted) })
+        })
+        isClickable = true
+        contentDescription = "Use ${m.label}"
+        setOnClickListener { hideMenu(); cb.onPickModel(m.provider, m.model) }
     }
 
     private fun menuRow(t: Llm.Tone, selected: Boolean) = LinearLayout(ctx).apply {
@@ -307,6 +362,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
     private val cardShown get() = card != null
     private lateinit var title: TextView
     private lateinit var farsiTag: TextView
+    private lateinit var modelLine: TextView
     private lateinit var body: TextView
     private lateinit var bodyScroll: ScrollView
     private lateinit var status: TextView
@@ -323,6 +379,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         val tone = tones.firstOrNull { it.id == toneId }
         title.text = tone?.label ?: ""
         farsiTag.visibility = if (fromFarsi) View.VISIBLE else View.GONE
+        renderModelLine()
         text.clear(); streaming = true
         status.visibility = View.GONE
         renderBody()
@@ -361,6 +418,16 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         setState(State.IDLE)
     }
 
+    /** "Claude Haiku 5.5 ⇄": which model wrote this; tap to rerun with the next one. */
+    private fun renderModelLine() {
+        val m = current ?: return run { modelLine.visibility = View.GONE }
+        modelLine.visibility = View.VISIBLE
+        val canSwitch = models.size > 1
+        modelLine.text = if (canSwitch) "${m.label}  ⇄" else m.label
+        modelLine.isClickable = canSwitch
+        modelLine.contentDescription = if (canSwitch) "${m.label}. Tap to try the next model." else m.label
+    }
+
     private fun renderBody() {
         val sb = SpannableStringBuilder(text)
         if (streaming) sb.append("▍", ForegroundColorSpan(p.clay), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -392,6 +459,11 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             text = "from Farsi"; textSize = 12f; setTextColor(p.muted)
             background = Ui.round(p.bg, dp(10).toFloat()); setPadding(dp(8), dp(3), dp(8), dp(3))
         }
+        modelLine = TextView(ctx).apply {
+            textSize = 12f; setTextColor(p.muted)
+            minHeight = dp(24); gravity = Gravity.CENTER_VERTICAL
+            setOnClickListener { if (models.size > 1 && !streaming) cb.onNextModel() }
+        }
         val close = ImageButton(ctx).apply {
             setImageResource(R.drawable.ic_close); setColorFilter(p.muted)
             background = Ui.ripple(Ui.round(0, dp(22).toFloat()), 0x28000000)
@@ -422,9 +494,15 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             setPadding(dp(16), dp(8), dp(12), dp(14))
             addView(LinearLayout(ctx).apply {
                 gravity = Gravity.CENTER_VERTICAL
-                addView(title)
-                addView(farsiTag, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
-                addView(View(ctx), LinearLayout.LayoutParams(0, 1, 1f))
+                addView(LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(LinearLayout(ctx).apply {
+                        gravity = Gravity.CENTER_VERTICAL
+                        addView(title)
+                        addView(farsiTag, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
+                    })
+                    addView(modelLine)
+                }, LinearLayout.LayoutParams(0, -2, 1f).apply { topMargin = dp(6) })
                 addView(close, LinearLayout.LayoutParams(dp(44), dp(44)))
             })
             addView(bodyScroll, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(2); marginEnd = dp(4) })
@@ -466,6 +544,9 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
         PixelFormat.TRANSLUCENT,
     )
+
+    /** For tests: the tone/model menu (null when closed). */
+    internal fun menuView(): View? = menu
 
     /** For tests: the ✕ target shown while dragging. */
     internal fun targetView(): View = target

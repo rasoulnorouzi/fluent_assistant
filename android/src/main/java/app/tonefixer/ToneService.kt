@@ -41,6 +41,7 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
         if (!prefs.bubbleOn) { overlay.hideBubble(); return } // dropped on ✕; the app turns it back on
         val node = runCatching { findFocus(AccessibilityNodeInfo.FOCUS_INPUT) }.getOrNull()
         if (node != null && node.isEditable && !node.isPassword) {
+            refreshModels()
             overlay.showBubble(cfg.tone(prefs.tone).letter)
             Llm.warm(cfg.provider(prefs.provider))
         } else {
@@ -67,6 +68,43 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
         applying = false
         snap = null
         overlay.closeCard()
+    }
+
+    // ---------- model choice ----------
+
+    /** Models of every service with a saved key (or just the current service if none has one yet). */
+    private fun choices(): List<Overlay.ModelChoice> {
+        val withKey = cfg.providers.values.filter { prefs.key(it.id) != null }.ifEmpty { listOf(cfg.provider(prefs.provider)) }
+        return withKey.flatMap { pr ->
+            prefs.models(pr).map { id ->
+                Overlay.ModelChoice(pr.id, id, pr.models.firstOrNull { it.id == id }?.label ?: id, pr.label.substringAfter(' '))
+            }
+        }
+    }
+
+    private fun refreshModels() {
+        val pr = cfg.provider(prefs.provider)
+        val list = choices()
+        val now = prefs.currentModel(pr)
+        overlay.setModels(list, list.firstOrNull { it.provider == pr.id && it.model == now }
+            ?: Overlay.ModelChoice(pr.id, now, pr.models.firstOrNull { it.id == now }?.label ?: now, pr.label.substringAfter(' ')))
+    }
+
+    override fun onPickModel(provider: String, model: String) {
+        prefs.provider = provider
+        prefs.setModel(provider, model)
+        refreshModels()
+        if (overlay.isCardShown() && snap != null) rewrite(cfg.tone(prefs.tone).id, fresh = false) // compare on the same text
+        else android.widget.Toast.makeText(this, "Tone Fixer now uses ${choices().firstOrNull { it.provider == provider && it.model == model }?.label ?: model}.", android.widget.Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onNextModel() {
+        val list = choices()
+        if (list.size < 2) return
+        val pr = cfg.provider(prefs.provider)
+        val i = list.indexOfFirst { it.provider == pr.id && it.model == prefs.currentModel(pr) }
+        val next = list[(i + 1) % list.size]
+        onPickModel(next.provider, next.model)
     }
 
     override fun onDismiss() {
@@ -97,6 +135,7 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
         val key = prefs.key(pr.id)
 
         call?.cancel()
+        refreshModels()
         overlay.startCard(toneId, TextOps.looksFarsi(s.input))
         if (key == null) { overlay.fail("Add your ${pr.label} API key in Tone Fixer.", settingsLink = true); return }
 
