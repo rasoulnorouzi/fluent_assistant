@@ -1,7 +1,7 @@
 # TODO
 
 **Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 2: 0/8 · Phase 3: 0/7**
-**Current step:** 1.16, on-device test by you (after CI runs: see 1.2) (1.2 waits on you: GitHub didn't start the CI job, see the run page)
+**Current step:** 1.16, on-device test by you with the test APK sent in chat (CI still blocked, see 1.2) (1.2 waits on you: GitHub didn't start the CI job, see the run page)
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -13,7 +13,7 @@
 
 ## Phase 1: Android (build now)
 - [x] 1.1 Gradle project skeleton (`android/`), empty Settings screen, builds locally with the wrapper
-- [ ] 1.2 GitHub Actions workflow: unit tests + APK build (unsigned at first) goes green. **Blocked:** workflow pushed, but GitHub didn't assign a runner (billing/Actions setting?)
+- [ ] 1.2 GitHub Actions workflow: unit tests + APK build (unsigned at first) goes green. **Blocked:** 8 runs, each failed in ~3 s without a runner. Repo is public (Actions are free), so it's likely an account billing lock or Actions disabled → check the run page / Settings → Actions
 - [x] 1.3 `shared/tones.json`, `shared/providers.json`, `shared/API.md`, copied into assets by Gradle
 - [x] 1.4 `Llm.kt`: config loading, request builders, `extra` merge, max_tokens, plus unit tests
 - [x] 1.5 `Llm.kt`: SSE streaming for Gemini + Claude, error mapping, plus unit tests with sample streams

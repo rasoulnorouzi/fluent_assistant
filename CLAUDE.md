@@ -56,6 +56,7 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Rendering an AdaptiveIconDrawable: its bounds = the visible (masked) area; the layers are drawn 1.5× bigger. Clip to the full bounds, not to the inner third.
 - 2026-11-06 In build.gradle.kts, `java.util.Properties()` inside `android { }` fails ("Unresolved reference util") because `java` means the Java extension there. Fix: `import java.util.Properties` at the top.
 - 2026-11-06 Android 13+ only shows ⋮ → "Allow restricted settings" AFTER the user has tried to enable the accessibility service once and seen the "Restricted setting" dialog. README and in-app hint explain that order.
+- 2026-11-06 CI still never starts (8 runs). Workaround: sent the user a locally built debug APK (signed with this container's debug key, so uninstall before installing a CI release later).
 
 ## Facts learned (API)
 - 2026-11-05 Claude Haiku 5.5 = `claude-haiku-5-5`; thinking is ON by default; `thinking:{type:"disabled"}` is allowed at effort low/medium/high; `temperature/top_p/top_k` are rejected on API version `2026-10-21`. Browser calls need header `anthropic-dangerous-direct-browser-access: true`.
