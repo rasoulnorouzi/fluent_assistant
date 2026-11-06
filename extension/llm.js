@@ -11,8 +11,11 @@ export function maxTokens(cfg, chars) {
 
 /** Request body. A model id that isn't in providers.json (custom) gets no `extra`. */
 export function buildBody(cfg, provider, modelId, tone, text) {
-  const system = cfg.tones.system.replace("{style}", tone.style);
+  const system = cfg.tones.system.replace("{style}", () => tone.style);
   const max = maxTokens(cfg, text.length);
+  // The text goes inside markers (tones.json → userTemplate), so the model treats it as text to
+  // rewrite, never as a question or an instruction to follow. A function replacement keeps "$&" literal.
+  text = cfg.tones.userTemplate ? cfg.tones.userTemplate.replace("{text}", () => text) : text;
   let body;
   if (provider.format === "gemini") {
     body = {

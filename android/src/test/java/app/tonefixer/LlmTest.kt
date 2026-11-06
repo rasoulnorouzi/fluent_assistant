@@ -21,9 +21,10 @@ class LlmTest {
     // ---------- config ----------
 
     @Test fun configLoads() {
-        assertEquals(7, cfg.tones.size)
+        assertEquals(8, cfg.tones.size)
         assertEquals("daily", cfg.tone(null).id)
-        assertEquals("friendly", cfg.tone("friendly").id)
+        assertEquals("polite", cfg.tone("polite").id)
+        assertEquals("daily", cfg.tone("friendly").id) // removed tone → default
         assertEquals("daily", cfg.tone("no-such-tone").id)
         assertEquals("gemini", cfg.provider(null).id)
         assertEquals("2026-10-21", claude.headers["anthropic-version"])
@@ -45,7 +46,7 @@ class LlmTest {
         val sys = b.getJSONObject("systemInstruction").getJSONArray("parts").getJSONObject(0).getString("text")
         assertTrue(sys.contains(cfg.tone("formal").style))
         assertFalse(sys.contains("{style}"))
-        assertEquals("hello there", b.getJSONArray("contents").getJSONObject(0).getJSONArray("parts").getJSONObject(0).getString("text"))
+        assertEquals("<text>\nhello there\n</text>", b.getJSONArray("contents").getJSONObject(0).getJSONArray("parts").getJSONObject(0).getString("text"))
         val gen = b.getJSONObject("generationConfig")
         assertEquals(200, gen.getInt("maxOutputTokens"))                       // base body kept...
         assertEquals("minimal", gen.getJSONObject("thinkingConfig").getString("thinkingLevel")) // ...extra merged in
@@ -59,7 +60,7 @@ class LlmTest {
         assertEquals(m.id, b.getString("model"))
         assertTrue(b.getBoolean("stream"))
         assertTrue(b.getString("system").contains(cfg.tone("casual").style))
-        assertEquals("yo", b.getJSONArray("messages").getJSONObject(0).getString("content"))
+        assertEquals("<text>\nyo\n</text>", b.getJSONArray("messages").getJSONObject(0).getString("content"))
         assertEquals("disabled", b.getJSONObject("thinking").getString("type"))
         assertEquals("low", b.getJSONObject("output_config").getString("effort"))
         assertFalse(b.has("temperature"))
@@ -222,7 +223,7 @@ class LlmTest {
         val key = System.getenv("GEMINI_KEY")
         org.junit.Assume.assumeTrue(!key.isNullOrBlank())
         for (m in gemini.models) {
-            val body = Llm.buildBody(cfg, gemini, m.id, cfg.tone("friendly"), "سلام، فردا نمی‌تونم بیام. جمعه خوبه؟")
+            val body = Llm.buildBody(cfg, gemini, m.id, cfg.tone("polite"), "سلام، فردا نمی‌تونم بیام. جمعه خوبه؟")
             val t0 = System.nanoTime(); var first = 0L
             val out = Llm.stream(gemini, m.id, key, body, Llm.Call()) { if (first == 0L) first = System.nanoTime() }
             println("LIVE ${m.id}: first text ${(first - t0) / 1_000_000} ms, stop=${out.stop}, error=${out.error}\n  ${out.text}")

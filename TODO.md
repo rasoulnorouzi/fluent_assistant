@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 3: 0/7**
-**Current step:** waiting on you: U.5 (install Android 0.2.12, then update to 0.2.13 in the app), 2.10 (extension on Gmail / WhatsApp Web / Slack / LinkedIn), 1.16 (phone test).
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 2b (quality): 3/6 · Phase 3: 0/7**
+**Current step:** Q.4, add/remove models. Waiting on you: install Android 0.2.13 (U.5), extension on real sites (2.10), phone test (1.16).
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -53,6 +53,14 @@
 - [x] 2.8 Headless Chromium test with the real extension on a local test page (+ screenshots): `node extension/test/e2e.cjs`, 12/12; plus a live Gemini run (Farsi → Friendly, Formal email: first text in ~0.85 s)
 - [x] 2.9 README section + zip sent to you
 - [ ] 2.10 Test on Gmail, WhatsApp Web, Slack, LinkedIn by you
+
+## Phase 2b: Tone quality + model list (approved 2026-11-06; you check the result at the end)
+- [x] Q.1 Live check of every tone (16 real-life messages × 7 tones on Gemini 3.5 Flash-Lite). Found: obeyed instructions inside the text (wrote a cat poem), "[Your Name]" placeholders and "Subject:" lines, invented details, Grammar only left errors and Finglish, Daily ≈ Grammar ≈ Work chat, Friendly ≈ Casual, em dashes
+- [x] Q.2 New prompt + 8 tones (Grammar only, Daily, Casual, Polite, Work chat, Email, Firm, Shorter); your text goes inside `<text>` markers; both platforms + tests
+- [x] Q.3 `shared/eval/`: the repeatable tone check (test messages + script), for future tuning
+- [ ] Q.4 Models: add, remove, restore defaults (Android Settings + extension options)
+- [ ] Q.5 Extension updates (option B): newer tones/models arrive by themselves; "new version" notice + publish script
+- [ ] Q.6 Publish Android 0.2.14 (through the in-app update) + extension 0.2.0; before/after page for your check
 
 ## Phase 3: iOS (planned)
 - [ ] 3.1 `ios/SHORTCUT.md`: Back Tap shortcut, step by step (interim solution)

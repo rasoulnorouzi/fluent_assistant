@@ -24,6 +24,8 @@ object Llm {
     )
     class Config(
         val system: String, val tones: List<Tone>, val defaultTone: String,
+        /** Wraps the user's text, e.g. "<text>\n{text}\n</text>", so it's never taken as an instruction. */
+        val userTemplate: String,
         val providers: Map<String, Provider>, val defaultProvider: String, val maxTokens: JSONObject,
     ) {
         fun tone(id: String?) = tones.firstOrNull { it.id == id } ?: tones.first { it.id == defaultTone }
@@ -58,7 +60,7 @@ object Llm {
                 },
             )
         }
-        return Config(t.getString("system"), tones, t.getString("defaultTone"), providers,
+        return Config(t.getString("system"), tones, t.getString("defaultTone"), t.optString("userTemplate", "{text}"), providers,
             p.getString("defaultProvider"), p.getJSONObject("maxTokens"))
     }
 
@@ -74,6 +76,7 @@ object Llm {
     fun buildBody(cfg: Config, provider: Provider, modelId: String, tone: Tone, text: String): JSONObject {
         val system = cfg.system.replace("{style}", tone.style)
         val max = maxTokens(cfg, text.length)
+        @Suppress("NAME_SHADOWING") val text = cfg.userTemplate.replace("{text}", text)
         val body = when (provider.format) {
             "gemini" -> JSONObject()
                 .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", system))))

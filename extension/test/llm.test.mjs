@@ -24,7 +24,7 @@ test("gemini body", () => {
   const b = llm.buildBody(cfg, gemini, m, tone("formal"), "hello there");
   assert.ok(b.systemInstruction.parts[0].text.includes(tone("formal").style));
   assert.ok(!b.systemInstruction.parts[0].text.includes("{style}"));
-  assert.equal(b.contents[0].parts[0].text, "hello there");
+  assert.equal(b.contents[0].parts[0].text, "<text>\nhello there\n</text>");
   assert.equal(b.generationConfig.maxOutputTokens, 200);
   assert.equal(b.generationConfig.thinkingConfig.thinkingLevel, "minimal");
   assert.equal(llm.requestUrl(gemini, m), `https://generativelanguage.googleapis.com/v1beta/models/${m}:streamGenerateContent?alt=sse`);
@@ -35,7 +35,7 @@ test("claude body and browser header", () => {
   const b = llm.buildBody(cfg, claude, m, tone("casual"), "yo");
   assert.equal(b.model, m);
   assert.equal(b.stream, true);
-  assert.equal(b.messages[0].content, "yo");
+  assert.equal(b.messages[0].content, "<text>\nyo\n</text>");
   assert.equal(b.thinking.type, "disabled");
   assert.equal(b.output_config.effort, "low");
   assert.ok(!("temperature" in b));
@@ -43,6 +43,13 @@ test("claude body and browser header", () => {
   assert.equal(h["anthropic-dangerous-direct-browser-access"], "true");
   assert.equal(h["anthropic-version"], "2026-10-21");
   assert.equal(h["x-api-key"], "k");
+});
+
+test("text goes inside the markers literally ($ patterns stay as typed)", () => {
+  const b = llm.buildBody(cfg, gemini, gemini.models[0].id, tone("daily"), "pay $& now $1");
+  assert.equal(b.contents[0].parts[0].text, "<text>\npay $& now $1\n</text>");
+  assert.equal(cfg.tones.tones.length, 8);
+  assert.ok(!cfg.tones.tones.some((t) => t.id === "friendly"));
 });
 
 test("custom model gets no extra; deepMerge", () => {

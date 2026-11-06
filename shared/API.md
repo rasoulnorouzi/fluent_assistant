@@ -7,10 +7,14 @@ this folder. If you write a new client, this page is all you need.
 
 ```
 system  = tones.system with "{style}" replaced by tone.style
-user    = the text from the field (selection if any, else the whole field)
+user    = tones.userTemplate with "{text}" replaced by the text from the field
+          (selection if any, else the whole field); userTemplate = "<text>\n{text}\n</text>"
 ```
 
-The text is sent as-is (not trimmed, so line breaks are kept). An empty or whitespace-only field
+The markers make the model treat the text as text to rewrite, never as a question or an
+instruction to follow (without them, "write a poem about cats" produced a poem). Replace literally
+(in JavaScript use a replacer function, so "$&" in the text stays as typed). max_tokens is computed
+from the raw text length, not the wrapped one. The text is sent as-is (not trimmed, so line breaks are kept). An empty or whitespace-only field
 is not sent.
 
 ## 2. max_tokens

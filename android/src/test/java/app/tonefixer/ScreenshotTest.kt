@@ -36,7 +36,7 @@ class ScreenshotTest {
     private fun overlay(): Overlay {
         val ctx = org.robolectric.RuntimeEnvironment.getApplication()
         val cfg = Llm.config(ctx)
-        val prefs = Prefs(ctx).apply { tone = "friendly" }
+        val prefs = Prefs(ctx).apply { tone = "polite" }
         return Overlay(ctx, prefs, object : Overlay.Callbacks {
             override fun onTap() {}
             override fun onPickTone(id: String) {}
@@ -47,7 +47,7 @@ class ScreenshotTest {
     }
 
     @Test fun cardStreaming() = overlay().run {
-        startCard("friendly", fromFarsi = true)
+        startCard("polite", fromFarsi = true)
         append("Hi Sara! I'm really sorry, but I can't make it tomorrow. I'm not")
         save(cardView()!!, "card-streaming")
     }
