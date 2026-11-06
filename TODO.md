@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 2: 0/8 · Phase 3: 0/7**
-**Current step:** 1.16, on-device test by you with the test APK sent in chat (the emulator here couldn't run the full flow: no hardware acceleration). 1.2 waits on you: GitHub didn't start the CI job, see the run page.
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 0/5 · Phase 2: 0/10 · Phase 3: 0/7**
+**Current step:** planning Phase 1b (in-app updates) and Phase 2 (Chrome extension); waiting for your approval. 1.16 (your phone test) still open.
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -35,15 +35,24 @@
 - [ ] Wrong key shows a clear error · [ ] Airplane mode shows a clear error
 - [ ] Service survives a reboot / a day of normal use (Pixel + Xiaomi/OnePlus)
 
-## Phase 2: Browser extension (planned, start after Phase 1)
-- [ ] 2.1 `extension/` scaffold: MV3 manifest, TS, esbuild script
-- [ ] 2.2 Service worker: streaming fetch for both providers from `shared/*.json`
-- [ ] 2.3 Content script: focus detection, button in Shadow DOM
-- [ ] 2.4 Preview card + tone menu (same design as Android)
-- [ ] 2.5 Apply: textarea/input (value + input event), contenteditable (execCommand insertText)
-- [ ] 2.6 Options page (provider, model, keys, default tone)
-- [ ] 2.7 Pre-warm on focus
-- [ ] 2.8 Test on Gmail, WhatsApp Web, Slack, a plain textarea
+## Phase 1b: In-app updates (Android, PLAN.md §4.7, waiting for approval)
+- [ ] U.1 Fixed release signing key: create it, send it to you, sign builds with it
+- [ ] U.2 `Update.kt`: read `latest.json`, compare versions, download, SHA-256 check, PackageInstaller
+- [ ] U.3 "About & updates" section in Settings (version, Check button, auto-check once a day)
+- [ ] U.4 `updates` branch with `latest.json` + APK; `publish-update.sh` to push a new version
+- [ ] U.5 Unit tests + screenshot; publish a 2nd version and update to it (you, on the phone)
+
+## Phase 2: Browser extension (Chrome, PLAN.md §5, waiting for approval)
+- [ ] 2.1 `extension/` scaffold: MV3 manifest, icons, `pack.sh` (copies shared JSON, makes the zip)
+- [ ] 2.2 `background.js`: streaming fetch + SSE parsing for both providers, pre-warm
+- [ ] 2.3 Node tests for request bodies and parsing (same recorded streams as Android)
+- [ ] 2.4 `content.js`: focus detection, bubble in Shadow DOM, Alt+Shift+F shortcut
+- [ ] 2.5 Preview card + tone menu (same design as Android, light/dark)
+- [ ] 2.6 Apply: textarea/input (native setter + input event), contenteditable (insertText), copy fallback
+- [ ] 2.7 Options page (provider, model, key + Test, tone, version)
+- [ ] 2.8 Headless Chromium test with the real extension on a local test page (+ screenshots)
+- [ ] 2.9 README section + zip sent to you
+- [ ] 2.10 Test on Gmail, WhatsApp Web, Slack, LinkedIn by you
 
 ## Phase 3: iOS (planned)
 - [ ] 3.1 `ios/SHORTCUT.md`: Back Tap shortcut, step by step (interim solution)

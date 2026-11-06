@@ -259,22 +259,65 @@ android/
 
 ---
 
-## 5. Browser extension (Phase 2, planned, not built yet)
+### 4.7 In-app updates (added 2026-11-06, waiting for approval)
 
-- **Chrome Manifest V3, TypeScript**, bundled with `esbuild` (the only dev dependency). Loaded as an
-  unpacked extension in Chrome on both laptops.
-- **content.ts**: on `focusin` for `textarea`, text `input`s and `[contenteditable]`, shows a
-  small sage button at the field's bottom-right corner (inside a Shadow DOM so sites can't restyle
-  it). Click = last tone; right-click or hold = tone menu. The same preview card as Android.
-- **background.ts (service worker)**: does the `fetch` with streaming and sends chunks back over a
-  `chrome.runtime` port. It uses `shared/tones.json` and `shared/providers.json` directly (imported
-  at build time). Claude requests add `anthropic-dangerous-direct-browser-access: true`.
-- **Replacing text**: `textarea/input` → set `value` and dispatch an `input` event (so
-  React/Vue apps notice). `contenteditable` (Gmail, Slack, WhatsApp Web) → select the range and use
-  `document.execCommand('insertText')`, which keeps the editor's undo history and internal state.
-- **Options page**: provider, model, keys, default tone. Keys go in `chrome.storage.local`
-  (not encrypted at rest; acceptable for a personal laptop, noted in the docs).
-- Pre-warm: on focus, a keyless `fetch(host, {method:'HEAD'})` from the service worker.
+- **Where**: a small "About & updates" section at the bottom of Settings: version number,
+  "Check for updates" button, and the result ("You're up to date" / "Version 0.2.14 is ready ·
+  Update"). Settings also checks by itself when you open it (at most once a day), so you see a
+  new version without pressing anything.
+- **Source**: one small file, `latest.json`, plus the APK, on a dedicated `updates` branch of
+  this repo, read from `raw.githubusercontent.com` (the repo is public, so no token). Its content:
+  `{versionCode, versionName, apk, sha256, notes}`. This works today, while GitHub Actions is still
+  blocked: I publish a new version by pushing those two files. When CI works, it can push them
+  instead (same files, same branch).
+- **Install**: download the APK into the app's cache → check its SHA-256 → hand it to Android's
+  own installer (`PackageInstaller`, built in, no library). Android shows its usual "Update this
+  app?" screen; you tap Update and your settings and keys stay. The first time, Android asks you
+  to allow "Install unknown apps" for Tone Fixer (one switch). New permission:
+  `REQUEST_INSTALL_PACKAGES`.
+- **Signing key (needed for this)**: Android only installs an update when it's signed with the same
+  key as the installed app. Today's test APK is signed with a throwaway key of this cloud machine,
+  which is gone when the machine is reclaimed. So I create one fixed release key now, send it to
+  you to keep safe (you also add it as a GitHub secret later), and sign every APK with it.
+  One-time cost: uninstall the current test APK once and install the first release-signed one.
+  After that, every update installs over the old version.
+- **Files**: one new `Update.kt` (check, download, verify, install), a few lines in
+  `SettingsActivity.kt` and the manifest. Tests: parsing `latest.json`, the version comparison,
+  the SHA-256 check (JVM unit tests), plus a screenshot of the About section.
+
+## 5. Browser extension (Phase 2, plan revised 2026-11-06, waiting for approval)
+
+- **Chrome Manifest V3, plain JavaScript, no build step and no npm packages** (changed from
+  "TypeScript + esbuild": fewer tools, and you can load the folder as it is). Loaded as an
+  unpacked extension (chrome://extensions → Developer mode → Load unpacked) on both laptops.
+- **Files** (`extension/`): `manifest.json`, `background.js` (the API calls), `content.js` (button,
+  menu, preview card, apply), `options.html` + `options.js` (settings), `icons/`. The shared
+  `tones.json` / `providers.json` are copied in by `extension/pack.sh`, which also makes the zip
+  I send you (the copies are not committed, so `shared/` stays the one source).
+- **content.js**: on focus in a `textarea`, a text `input` or a `[contenteditable]` editor (Gmail,
+  WhatsApp Web, Slack, LinkedIn, ChatGPT…), shows the same sage bubble at the field's bottom-right
+  corner, inside a Shadow DOM so sites can't restyle it. Click = last tone; right-click or long
+  press = tone menu. Same preview card as Android (streaming text, tone chips, ✕, ✓), same colours,
+  dark mode follows the system. Keyboard shortcut: **Alt+Shift+F** = run with the last tone
+  (changeable in chrome://extensions/shortcuts). Password fields are ignored.
+- **background.js (service worker)**: does the streaming `fetch` for both providers, same
+  request bodies and SSE parsing as `shared/API.md`, and sends chunks to the page over a
+  `chrome.runtime` port. Claude requests add `anthropic-dangerous-direct-browser-access: true`.
+  Pre-warm: on focus, a keyless `HEAD` to the provider's host (60 s throttle, as on Android).
+- **Reading**: the selection if there is one inside the field, otherwise the whole field.
+- **Replacing text** (only after ✓): `textarea`/`input` → set the value through the native setter
+  and fire an `input` event (so React/Vue apps notice). `contenteditable` → re-select the range
+  and `document.execCommand('insertText')`, which keeps the editor's undo and internal state.
+  If the field changed since the click, or the editor refuses, the result is copied to the
+  clipboard and the card says "Copied, paste it". Same rules as Android.
+- **Options page**: provider, model (+ custom), API key with a Test button, tone. Stored in
+  `chrome.storage.local` (not encrypted at rest; fine for a personal laptop, noted in README).
+- **Tests**: the pure parts (request body, max tokens, SSE parsing) are checked against the same
+  recorded streams as Android with Node's built-in test runner (`node --test`, no packages), and
+  the UI is checked in the pre-installed headless Chromium with the real extension loaded on a test
+  page (textarea, input, contenteditable). Real sites (Gmail, WhatsApp Web, Slack) = you, step 2.10.
+- **Updates**: the options page shows the version; new versions come as a new zip (unpacked
+  extensions can't update themselves). Re-load it in chrome://extensions.
 
 ## 6. iOS (Phase 3, planned, not built yet)
 
