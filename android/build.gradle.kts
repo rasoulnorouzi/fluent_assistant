@@ -30,10 +30,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    testOptions.unitTests.isIncludeAndroidResources = true // Robolectric screenshot tests
 }
 
 dependencies {
     // Test-only: Android's org.json is a stub in JVM unit tests, so tests use the real one.
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")
+    // Test-only: renders real screens to PNG on the JVM (no emulator needed). Never ships in the app.
+    testImplementation("org.robolectric:robolectric:4.17")
 }

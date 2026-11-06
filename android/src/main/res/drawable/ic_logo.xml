@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Same artwork as design/logo.svg: speech bubble + soft wave (tone) + clay dot. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp" android:height="96dp"
+    android:viewportWidth="96" android:viewportHeight="96">
+    <path android:fillColor="#6F8D75"
+        android:pathData="M28,0h40a28,28 0,0 1,28 28v40a28,28 0,0 1,-28 28h-40a28,28 0,0 1,-28 -28v-40a28,28 0,0 1,28 -28z" />
+    <path android:fillColor="#FBF8F1"
+        android:pathData="M20,30c0,-8 6,-13 14,-13h28c8,0 14,5 14,13v20c0,8 -6,13 -14,13H42L30,74.5c-1.2,1 -3,0.1 -2.7,-1.5L29.4,63C24,62 20,57.5 20,50z" />
+    <path android:strokeColor="#4F6B55" android:strokeWidth="5" android:strokeLineCap="round"
+        android:pathData="M31,41c3.5,-6 8,-6 11.5,0s8,6 11.5,0" />
+    <path android:fillColor="#C47A5A"
+        android:pathData="M64,41m-3.6,0a3.6,3.6 0,1 1,7.2 0a3.6,3.6 0,1 1,-7.2 0" />
+</vector>

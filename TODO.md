@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 5/16 (31%) · Phase 2: 0/8 · Phase 3: 0/7**
-**Current step:** 1.7/1.8, Settings screen + setup checklist (1.2 waits on you: GitHub didn't start the CI job, see the run page)
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 7/16 (44%) · Phase 2: 0/8 · Phase 3: 0/7**
+**Current step:** 1.9–1.12, accessibility service + bubble + preview card + apply (1.2 waits on you: GitHub didn't start the CI job, see the run page)
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -18,8 +18,8 @@
 - [x] 1.4 `Llm.kt`: config loading, request builders, `extra` merge, max_tokens, plus unit tests
 - [x] 1.5 `Llm.kt`: SSE streaming for Gemini + Claude, error mapping, plus unit tests with sample streams
 - [x] 1.6 `Prefs.kt`: settings + Keystore AES-GCM encryption of API keys (on-device check: Settings → Test)
-- [ ] 1.7 `SettingsActivity`: provider, model (+ custom id), keys, default tone, **Test key** button
-- [ ] 1.8 Setup checklist in Settings (restricted settings, accessibility, battery/autostart) with deep links
+- [x] 1.7 `SettingsActivity`: provider, model (+ custom id), keys, default tone, **Test key** button
+- [x] 1.8 Setup checklist in Settings (restricted settings, accessibility, battery/autostart) with deep links
 - [ ] 1.9 `ToneService`: track editable focus, show/hide bubble, skip password fields
 - [ ] 1.10 `Overlay`: bubble (drag, remembered position, tone badge), tap = last tone, long-press = menu
 - [ ] 1.11 Read text (selection or whole field), preview card with streaming text, ✕ cancel, tone chips rerun

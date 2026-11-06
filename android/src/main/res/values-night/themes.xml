@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="ToneFixer" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:colorAccent">#9BBBA2</item>
+        <item name="android:colorPrimary">#9BBBA2</item>
+        <item name="android:windowBackground">#1F2320</item>
+        <item name="android:statusBarColor">#1F2320</item>
+        <item name="android:navigationBarColor">#1F2320</item>
+    </style>
+</resources>

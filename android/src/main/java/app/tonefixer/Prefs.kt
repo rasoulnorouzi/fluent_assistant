@@ -39,8 +39,13 @@ class Prefs(ctx: Context) {
         runCatching { decrypt(enc) }.getOrNull() ?: return null
     }
 
+    /** True after the Test button got an answer with the current key. */
+    fun keyOk(provider: String) = sp.getBoolean("keyOk_$provider", false)
+    fun setKeyOk(provider: String, ok: Boolean) = sp.edit().putBoolean("keyOk_$provider", ok).apply()
+
     fun setKey(provider: String, key: String?) {
         cache.remove(provider)
+        setKeyOk(provider, false)
         val k = key?.trim().orEmpty()
         if (k.isEmpty()) sp.edit().remove("key_$provider").apply()
         else sp.edit().putString("key_$provider", encrypt(k)).apply()

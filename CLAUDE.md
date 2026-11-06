@@ -24,6 +24,9 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Android build: AGP 9.4.1 (built-in Kotlin, no Kotlin plugin), Gradle wrapper 9.8.2, compileSdk/targetSdk 36, minSdk 29, JDK 17 target. Single module: `android/` itself is the app.
 - 2026-11-06 App id / package: `app.tonefixer`.
 - 2026-11-06 Gemini models: `gemini-3.5-flash-lite` (default) and `gemini-3.1-flash-lite`, both with `thinkingLevel: minimal`. Dropped `gemini-2.5-flash-lite`.
+- 2026-11-06 Added `Ui.kt` (palette light/dark, chip/button helpers, a small wrapping Flow layout) because Settings and the overlay share it, so it lives in one file instead of two copies. Settings is built in code (no XML layouts).
+- 2026-11-06 Settings has a "Try it here" text box so the bubble can be tested inside the app itself.
+- 2026-11-06 UI is checked without a phone via Robolectric screenshot tests (`ScreenshotTest`, test-only dependency) → PNGs in android/build/screens/.
 
 ## Preferences
 - 2026-11-05 Speed is the top priority (direct API calls, streaming, pre-warm, thinking off, short fixed prompt).
@@ -38,6 +41,9 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Local builds here: Android SDK installed at ~/android-sdk (platforms;android-36, build-tools;36.1.0); android/local.properties points to it (gitignored).
 - 2026-11-06 User pasted a Gemini test key in chat; kept only in the session scratchpad, never in the repo. User should rotate it after testing.
 - 2026-11-06 First CI run failed in 1 s with no runner assigned and no logs (runner_id 0). Likely account billing/Actions minutes or Actions disabled; user must check the run page. Local builds keep working meanwhile.
+- 2026-11-06 Robolectric downloads its Android runtime jar at test time and Maven Central answered 429. Fix: curl it (with retries) into ~/.m2/repository/org/robolectric/android-all-instrumented/15-robolectric-13954326-i7/; Robolectric picks it up from there. In CI (GitHub) it downloads normally.
+- 2026-11-06 Password EditTexts default to a monospace font (the hint looked like a typewriter). Fix: set `typeface = Typeface.DEFAULT` after setting inputType.
+- 2026-11-06 No /dev/kvm in the cloud box → no emulator; Robolectric screenshots are the way to see the UI here.
 
 ## Facts learned (API)
 - 2026-11-05 Claude Haiku 5.5 = `claude-haiku-5-5`; thinking is ON by default; `thinking:{type:"disabled"}` is allowed at effort low/medium/high; `temperature/top_p/top_k` are rejected on API version `2026-10-21`. Browser calls need header `anthropic-dangerous-direct-browser-access: true`.
