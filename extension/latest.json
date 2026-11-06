@@ -1,5 +1,5 @@
 {
-  "version": "0.2.1",
-  "zip": "tone-fixer-extension-0.2.1.zip",
-  "notes": "Clear message when the free daily limit is reached."
+  "version": "0.2.2",
+  "zip": "tone-fixer-extension-0.2.2.zip",
+  "notes": "Hide on this site; bubble a bit more visible."
 }
