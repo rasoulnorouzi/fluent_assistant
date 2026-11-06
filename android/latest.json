@@ -1,7 +1,7 @@
 {
-  "versionCode": 12,
-  "versionName": "0.2.12",
-  "apk": "ToneFixer-0.2.12.apk",
-  "sha256": "0ac41b4fd1066cfc283b49804d29681397fccd60fd8f6f43c0b818baf015c7be",
-  "notes": "First release build: in-app updates in Settings \u2192 About & updates."
+  "versionCode": 13,
+  "versionName": "0.2.13",
+  "apk": "ToneFixer-0.2.13.apk",
+  "sha256": "bbb71b29cec8c3324a0b972b69badd8ad50951950e939e01437aace9e5d69919",
+  "notes": "Test update: if you can read this, in-app updates work."
 }
