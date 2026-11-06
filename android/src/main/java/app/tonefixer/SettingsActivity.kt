@@ -82,7 +82,8 @@ class SettingsActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             addView(ImageView(context).apply { setImageResource(R.drawable.ic_logo) }, LinearLayout.LayoutParams(dp(40), dp(40)))
             addView(text("Tone Fixer", 28f, p.ink).apply {
-                typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
+                // Fraunces (soft, 600), shipped as a tiny file holding only the letters of "Tone Fixer".
+                typeface = runCatching { resources.getFont(R.font.fraunces_title) }.getOrDefault(Typeface.create(Typeface.SERIF, Typeface.BOLD))
                 setPadding(dp(12), 0, 0, 0)
             })
         })

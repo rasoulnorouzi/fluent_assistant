@@ -67,6 +67,22 @@ class ScreenshotTest {
         save(bubbleView(), "bubble-working")
     }
 
+    @Test fun launcherIcon() {
+        val ctx = org.robolectric.RuntimeEnvironment.getApplication()
+        val icon = ctx.getDrawable(R.mipmap.ic_launcher)!!
+        val size = 324 // 108dp at 3x
+        val bmp = Bitmap.createBitmap(size * 2 + 40, size, Bitmap.Config.ARGB_8888)
+        Canvas(bmp).apply {
+            drawColor(0xFFDDDAD2.toInt())
+            icon.setBounds(0, 0, size, size)
+            // Circle mask (most launchers) and rounded square. AdaptiveIconDrawable treats the bounds as the visible area.
+            save(); clipPath(android.graphics.Path().apply { addCircle(size / 2f, size / 2f, size / 2f, android.graphics.Path.Direction.CW) }); icon.draw(this); restore()
+            save(); translate(size + 40f, 0f)
+            clipPath(android.graphics.Path().apply { addRoundRect(0f, 0f, size.toFloat(), size.toFloat(), 80f, 80f, android.graphics.Path.Direction.CW) }); icon.draw(this); restore()
+        }
+        File(File("build/screens").apply { mkdirs() }, "launcher-icon.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
     /** Lays out a detached view at phone width and saves it. */
     private fun save(v: View, name: String) {
         val w = 784

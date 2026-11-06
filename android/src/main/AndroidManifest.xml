@@ -7,7 +7,7 @@
 
     <application
         android:label="Tone Fixer"
-        android:icon="@drawable/ic_logo"
+        android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:supportsRtl="true"
         android:theme="@style/ToneFixer">
