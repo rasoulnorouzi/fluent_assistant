@@ -1,7 +1,7 @@
 {
-  "versionCode": 13,
-  "versionName": "0.2.13",
-  "apk": "ToneFixer-0.2.13.apk",
-  "sha256": "bbb71b29cec8c3324a0b972b69badd8ad50951950e939e01437aace9e5d69919",
-  "notes": "Test update: if you can read this, in-app updates work."
+  "versionCode": 14,
+  "versionName": "0.2.14",
+  "apk": "ToneFixer-0.2.14.apk",
+  "sha256": "037c65d33855f00a59662604d2289e7b596123cf8403436a1d5cea18428f06c8",
+  "notes": "New and better tones (Polite, Firm; no more [Your Name]), and you can add or remove models."
 }
