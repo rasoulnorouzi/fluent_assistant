@@ -37,6 +37,7 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Maven Central sometimes returns HTTP 429 during the first build. Fix: just rerun; it succeeds once deps are cached.
 - 2026-11-06 Local builds here: Android SDK installed at ~/android-sdk (platforms;android-36, build-tools;36.1.0); android/local.properties points to it (gitignored).
 - 2026-11-06 User pasted a Gemini test key in chat; kept only in the session scratchpad, never in the repo. User should rotate it after testing.
+- 2026-11-06 First CI run failed in 1 s with no runner assigned and no logs (runner_id 0). Likely account billing/Actions minutes or Actions disabled; user must check the run page. Local builds keep working meanwhile.
 
 ## Facts learned (API)
 - 2026-11-05 Claude Haiku 5.5 = `claude-haiku-5-5`; thinking is ON by default; `thinking:{type:"disabled"}` is allowed at effort low/medium/high; `temperature/top_p/top_k` are rejected on API version `2026-10-21`. Browser calls need header `anthropic-dangerous-direct-browser-access: true`.
