@@ -1,7 +1,7 @@
 {
-  "versionCode": 17,
-  "versionName": "0.2.17",
-  "apk": "ToneFixer-0.2.17.apk",
-  "sha256": "b33c908b441f455f4fb4e9e23abe60c4232f7ffb0e1ba72e48d3c5608a8ea16e",
-  "notes": "Bubble: faded but clearly visible, with a soft shadow."
+  "versionCode": 18,
+  "versionName": "0.2.18",
+  "apk": "ToneFixer-0.2.18.apk",
+  "sha256": "448b85e10fc43ef5550aad43a25fa767ba2bdbd4ff7a330d4a1e1b8b8785ce78",
+  "notes": "Choose the model from the bubble (hold it); the result card shows which model wrote it."
 }
