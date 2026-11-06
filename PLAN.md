@@ -325,7 +325,7 @@ android/
 
 iOS does not allow floating buttons over other apps, so there are two parts:
 
-**6a. Interim: Apple Shortcut + Back Tap** (about 30 minutes, no code, no Mac needed)
+**6a. Apple Shortcuts (built, see `ios/SHORTCUT.md`)** (about 30–45 minutes on the phone, no code, no Mac)
 - Shortcut: *Get Clipboard → Get Contents of URL* (non-streaming Gemini or Claude call, key
   in the shortcut) → *Get Dictionary Value* → *Copy to Clipboard* → *Show Notification "Fixed"*.
 - One shortcut per favourite tone, or one with a *Choose from Menu* step.

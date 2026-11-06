@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 2b (quality): 6/6 · Phase 2c (off switch): 4/4 · Phase 2d (model choice): 3/3 (100%) · Phase 3: 0/7**
-**Current step:** extension 0.2.4 (bubble outside the box, draggable) published; waiting on you: real sites (2.10), phone test (1.16), next in-app update (U.5).
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 2b (quality): 6/6 · Phase 2c (off switch): 4/4 · Phase 2d (model choice): 3/3 (100%) · Phase 3: 1/7**
+**Current step:** Mehrnaz builds the iPhone shortcuts from ios/SHORTCUT.md. Still open: next in-app update (U.5), real sites (2.10), phone test (1.16).
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -74,7 +74,7 @@
 - [x] M.3 Tests + screenshots (Android 50, extension 15 + e2e 14/14); published Android 0.2.18, extension 0.2.3
 
 ## Phase 3: iOS (planned)
-- [ ] 3.1 `ios/SHORTCUT.md`: Back Tap shortcut, step by step (interim solution)
+- [x] 3.1 `ios/SHORTCUT.md`: two shortcuts (Tone Fixer = Daily tone, Persian meaning), Share menu / AssistiveTouch / Back Tap; request tested live on Claude Haiku 5.5 (0.7–0.8 s)
 - [ ] 3.2 Decide: free Apple ID (7-day re-sign) or paid account, before building the keyboard
 - [ ] 3.3 Xcode project: container app (settings, key in shared Keychain group)
 - [ ] 3.4 Keyboard extension UI: tone chips + Fix + globe key
