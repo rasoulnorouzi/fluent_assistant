@@ -353,7 +353,7 @@ shared/     tones.json  providers.json  API.md
 design/     logo.svg  icon-foreground.svg  (mockup source)
 android/    (Phase 1)
 .github/workflows/android.yml
-extension/  (Phase 2, later)
+extension/  manifest.json  background.js  content.js  llm.js  options.html/.js  pack.sh  icons/  test/
 ios/        (Phase 3, later)
 ```
 

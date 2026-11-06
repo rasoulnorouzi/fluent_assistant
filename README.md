@@ -35,7 +35,36 @@ it up or down to move it. If you select part of the text first, only the selecti
 
 **Updating:** Tone Fixer → About & updates (see below). Settings and keys are kept.
 
-## Updates (inside the app)
+## Chrome extension (laptops)
+
+The same bubble in Chrome: click into any text box (Gmail, WhatsApp Web, Slack, LinkedIn, any
+form), type, and a small sage bubble appears at its corner.
+
+**Install** (once per laptop):
+1. Unzip `tone-fixer-extension-<version>.zip` somewhere you'll keep it (e.g. Documents). It holds
+   a `tone-fixer` folder. (From a git checkout instead: run `extension/pack.sh`, then use `extension/`.)
+2. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked**, and
+   pick the `tone-fixer` folder.
+3. The settings page opens: paste your Gemini or Claude key, tap **Test**, pick a tone.
+4. Optional: pin it (puzzle icon → pin) so the icon opens the settings in one click.
+
+**Using it:** click the bubble = rewrite with the current tone. Right-click or hold it = pick
+another tone. The result appears in a card; ✓ replaces your text (Ctrl+Z undoes it), ✕ or Esc
+cancels. If you select part of the text first, only that part is rewritten. In Gmail, your
+signature and the quoted mail are left alone. Keyboard: **Alt+Shift+F** rewrites, press it again
+to replace (change it at `chrome://extensions/shortcuts`).
+
+**Updating:** unzip the new version over the old folder, then click ↻ on Tone Fixer in
+`chrome://extensions`. Settings and keys stay.
+
+**Privacy:** the key is stored in Chrome's extension storage on that laptop (not encrypted on disk)
+and is only sent to the provider you chose. Pages can't read it.
+
+**Tests (developers):** `node --test extension/test/*.test.mjs` (request/stream logic, no
+packages) and `node extension/test/e2e.cjs` (real extension in Chromium against a mock API; needs
+Playwright).
+
+## Android updates (inside the app)
 
 Open Tone Fixer → scroll to **About & updates**. The app checks by itself when you open it (at
 most once a day), or tap **Check for updates**. When a new version is ready, tap **Update to …**:

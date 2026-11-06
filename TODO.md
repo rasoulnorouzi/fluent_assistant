@@ -1,7 +1,7 @@
 # TODO
 
-**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 8/10 · Phase 3: 0/7**
-**Current step:** 2.9, README + zip for you. Waiting on you: U.5 (install 0.2.12, update to 0.2.13), 1.16 (phone test), later 2.10 (extension on real sites).
+**Progress: Phase 0: 6/6 done (100%) · Phase 1: 14/16 (88%) · Phase 1b (updates): 4/5 · Phase 2: 9/10 · Phase 3: 0/7**
+**Current step:** waiting on you: U.5 (install Android 0.2.12, then update to 0.2.13 in the app), 2.10 (extension on Gmail / WhatsApp Web / Slack / LinkedIn), 1.16 (phone test).
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -51,7 +51,7 @@
 - [x] 2.6 Apply: textarea/input (native setter + input event), contenteditable (insertText), copy fallback
 - [x] 2.7 Options page (provider, model, key + Test, tone, version)
 - [x] 2.8 Headless Chromium test with the real extension on a local test page (+ screenshots): `node extension/test/e2e.cjs`, 12/12; plus a live Gemini run (Farsi → Friendly, Formal email: first text in ~0.85 s)
-- [ ] 2.9 README section + zip sent to you
+- [x] 2.9 README section + zip sent to you
 - [ ] 2.10 Test on Gmail, WhatsApp Web, Slack, LinkedIn by you
 
 ## Phase 3: iOS (planned)
