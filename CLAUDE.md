@@ -74,6 +74,9 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Rich editors: without a selection, rewrite everything up to the first `.gmail_signature/.gmail_quote/blockquote/#Signature…`, so signatures and quoted mail survive. Read text with Selection.toString() (keeps line breaks), not Range.toString().
 - 2026-11-06 fetch() treats port 1 as a "bad port" (fails before headers are checked): use a real closed port in "no connection" tests.
 
+- 2026-11-06 User couldn't install the 0.2.12 APK ("gave me error", exact message unknown). APK checked: v2-signed, not debuggable/testOnly, resources.arsc stored + aligned, so it's a phone-side refusal. Most likely cause: the old debug-signed test app still installed (different key → "App not installed"/"conflicts with an existing package"). Asked the user to uninstall it first; sent 0.2.13 and 0.2.14 as files. 118 KB is the full app (R8, no libraries).
+- 2026-11-06 Published: Android 0.2.14 (new tones + model editing) and extension 0.2.0 + shared config on the `updates` branch. Live check after the change: Android code path (Farsi → Polite) and both Gemini models OK.
+- 2026-11-06 Free Gemini keys rate-limit bursts (HTTP 429): the tone check runs 1–2 requests at a time with retries. Not an issue for normal use (one request per tap).
 ## Facts learned (API)
 - 2026-11-05 Claude Haiku 5.5 = `claude-haiku-5-5`; thinking is ON by default; `thinking:{type:"disabled"}` is allowed at effort low/medium/high; `temperature/top_p/top_k` are rejected on API version `2026-10-21`. Browser calls need header `anthropic-dangerous-direct-browser-access: true`.
 - 2026-11-06 Live test (gemini-3.5-flash-lite, thinkingLevel minimal): first text in ~0.9–1.5 s from the cloud box without pre-warm; Farsi, Finglish, questions and an "ignore your instructions" message were all rewritten correctly by the fixed prompt.

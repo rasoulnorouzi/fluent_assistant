@@ -60,7 +60,7 @@
 - [x] Q.3 `shared/eval/`: the repeatable tone check (test messages + script), for future tuning
 - [x] Q.4 Models: add, remove, restore defaults (Android Settings + extension options)
 - [x] Q.5 Extension updates (option B): newer tones/models arrive by themselves; "new version" notice + publish script
-- [ ] Q.6 Publish Android 0.2.14 (through the in-app update) + extension 0.2.0; before/after page for your check
+- [ ] Q.6 Publish Android 0.2.14 (through the in-app update) + extension 0.2.0; before/after page for your check (published; page in progress)
 
 ## Phase 3: iOS (planned)
 - [ ] 3.1 `ios/SHORTCUT.md`: Back Tap shortcut, step by step (interim solution)
