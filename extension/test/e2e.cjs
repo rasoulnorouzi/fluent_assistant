@@ -24,9 +24,12 @@ const PAGE = `<!doctype html><meta charset="utf-8"><title>Test page</title>
 <div style="height:600px"></div></body>`;
 
 let lastBody = null;
+const remote = {}; // the fake `updates` branch: filled in below
 function mockServer() {
   return http.createServer(async (req, res) => {
     if (req.url === "/page") { res.writeHead(200, { "content-type": "text/html" }); return res.end(PAGE); }
+    const u = req.url.split("?")[0];
+    if (u.startsWith("/updates/") && remote[u]) { res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify(remote[u])); }
     if (req.method === "HEAD") { res.writeHead(200); return res.end(); }
     let raw = ""; for await (const c of req) raw += c;
     if (!req.url.includes(":streamGenerateContent")) { res.writeHead(404); return res.end(); }
@@ -60,6 +63,16 @@ function mockServer() {
   prov.providers.gemini.url = `${base}/v1beta/models/{model}:streamGenerateContent?alt=sse`;
   prov.providers.gemini.warmUrl = `${base}/`;
   fs.writeFileSync(path.join(dir, "providers.json"), JSON.stringify(prov));
+  // Fake `updates` branch: a newer Daily style (marked) and a newer extension version.
+  const tonesRemote = JSON.parse(fs.readFileSync(path.join(dir, "tones.json"), "utf8"));
+  tonesRemote.tones.find((t) => t.id === "daily").style += " REMOTE-MARK";
+  remote["/updates/shared/tones.json"] = tonesRemote;
+  remote["/updates/shared/providers.json"] = prov;
+  remote["/updates/extension/latest.json"] = { version: "9.9.9", zip: "tone-fixer-extension-9.9.9.zip", notes: "Test notes." };
+  for (const f of ["background.js"]) {
+    const p = path.join(dir, f);
+    fs.writeFileSync(p, fs.readFileSync(p, "utf8").replace("https://raw.githubusercontent.com/rasoulnorouzi/fluent_assistant/updates/", `${base}/updates/`));
+  }
   const man = JSON.parse(fs.readFileSync(path.join(dir, "manifest.json"), "utf8"));
   man.host_permissions.push("http://127.0.0.1/*");
   fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(man));
@@ -73,6 +86,8 @@ function mockServer() {
   let sw = ctx.serviceWorkers()[0] || (await ctx.waitForEvent("serviceworker"));
   const extId = sw.url().split("/")[2];
   await sw.evaluate(() => chrome.storage.local.set({ keys: { gemini: "test-key" }, tone: "daily" }));
+  // The install-time update check stores the downloaded tones; wait for it.
+  for (let i = 0; i < 50 && !(await sw.evaluate(() => chrome.storage.local.get("remoteCfg").then((s) => !!s.remoteCfg))); i++) await new Promise((r) => setTimeout(r, 100));
   for (const p of ctx.pages()) if (p.url().includes("options.html")) await p.close(); // opened on install
 
   const page = await ctx.newPage();
@@ -105,7 +120,7 @@ function mockServer() {
     await ui.locator(".ok:not([disabled])").waitFor();
     assert.equal(await ui.locator(".title").textContent(), "Daily");
     assert.equal(await ui.locator(".body").textContent(), "Hi! hi sara i cant come tomorow");
-    assert.ok(lastBody.systemInstruction.parts[0].text.length > 50);
+    assert.ok(lastBody.systemInstruction.parts[0].text.includes("REMOTE-MARK"), "downloaded tones are used");
     await shot("ext-card-done");
     await ok.click();
     await card.waitFor({ state: "hidden" });
@@ -260,6 +275,13 @@ function mockServer() {
     await o.screenshot({ path: path.join(SHOTS, "ext-options.png"), fullPage: true });
     await o.emulateMedia({ colorScheme: "dark" });
     await o.screenshot({ path: path.join(SHOTS, "ext-options-dark.png"), fullPage: true });
+    // Update notice: a newer version on the updates branch.
+    await o.emulateMedia({ colorScheme: "light" });
+    await o.locator("#updateNew").waitFor();
+    assert.equal(await o.locator("#newVersion").textContent(), "9.9.9");
+    assert.match(await o.locator("#download").getAttribute("href"), /updates\/extension\/tone-fixer-extension-9\.9\.9\.zip$/);
+    assert.equal(await sw.evaluate(() => chrome.action.getBadgeText({})), "NEW");
+    await o.locator("main > .card").screenshot({ path: path.join(SHOTS, "ext-update-notice.png") });
     await o.close();
   });
 

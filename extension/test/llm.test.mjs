@@ -177,3 +177,18 @@ test("model list: defaults, remove, add, fallback, old custom model kept", () =>
   // A built-in model added back gets its extra settings again (thinking off).
   assert.equal(llm.buildBody(cfg, gemini, ids[1], tone("daily"), "x").generationConfig.thinkingConfig.thinkingLevel, "minimal");
 });
+
+test("updates: downloaded config is used only when valid and not older; version compare", () => {
+  const bundled = { tones: cfg.tones, providers: cfg.providers };
+  const newTones = { ...cfg.tones, tones: [cfg.tones.tones[0], { ...cfg.tones.tones[1], label: "Everyday" }] };
+  assert.equal(llm.chooseConfig(bundled, { tones: newTones, providers: cfg.providers }).tones.tones[1].label, "Everyday");
+  assert.equal(llm.chooseConfig(bundled, null).tones, cfg.tones);
+  assert.equal(llm.chooseConfig(bundled, { tones: { ...newTones, version: 1 } }).tones, cfg.tones); // older format
+  assert.equal(llm.chooseConfig(bundled, { tones: { ...newTones, tones: [] } }).tones, cfg.tones); // broken
+  assert.equal(llm.chooseConfig(bundled, { tones: { ...newTones, defaultTone: "gone" } }).tones, cfg.tones);
+  assert.equal(llm.chooseConfig(bundled, { providers: { providers: {} } }).providers, cfg.providers);
+  assert.ok(llm.isNewerVersion("0.10.0", "0.9.3"));
+  assert.ok(llm.isNewerVersion("0.2.1", "0.2.0"));
+  assert.ok(!llm.isNewerVersion("0.2.0", "0.2.0"));
+  assert.ok(!llm.isNewerVersion("0.1.9", "0.2"));
+});

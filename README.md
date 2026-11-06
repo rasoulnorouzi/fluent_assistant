@@ -54,8 +54,12 @@ cancels. If you select part of the text first, only that part is rewritten. In G
 signature and the quoted mail are left alone. Keyboard: **Alt+Shift+F** rewrites, press it again
 to replace (change it at `chrome://extensions/shortcuts`).
 
-**Updating:** unzip the new version over the old folder, then click ↻ on Tone Fixer in
-`chrome://extensions`. Settings and keys stay.
+**Updating:** new tones, prompt and model lists arrive by themselves (checked every few hours).
+When a new extension version is out, the toolbar icon shows **NEW** and the settings page (About)
+has a **Download** button: unzip it over your `tone-fixer` folder (replace the files), then click
+↻ on Tone Fixer in `chrome://extensions`. Settings and keys stay.
+To publish (developers): `extension/publish.sh config` (tones/models only) or bump `version` in
+`manifest.json` and run `extension/publish.sh "What's new"`.
 
 **Privacy:** the key is stored in Chrome's extension storage on that laptop (not encrypted on disk)
 and is only sent to the provider you chose. Pages can't read it.

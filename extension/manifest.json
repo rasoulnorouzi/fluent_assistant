@@ -1,24 +1,52 @@
 {
   "manifest_version": 3,
   "name": "Tone Fixer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Fix grammar and tone (and translate Farsi) in any text box, with your own Gemini or Claude key.",
-  "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
-  "action": { "default_title": "Tone Fixer settings", "default_icon": { "16": "icons/16.png", "32": "icons/32.png" } },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "action": {
+    "default_title": "Tone Fixer settings",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png"
+    }
+  },
   "options_page": "options.html",
-  "background": { "service_worker": "background.js", "type": "module" },
-  "permissions": ["storage"],
-  "host_permissions": ["https://generativelanguage.googleapis.com/*", "https://api.anthropic.com/*"],
-  "content_scripts": [{
-    "matches": ["<all_urls>"],
-    "js": ["content.js"],
-    "all_frames": true,
-    "match_about_blank": true,
-    "run_at": "document_idle"
-  }],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.anthropic.com/*",
+    "https://raw.githubusercontent.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "all_frames": true,
+      "match_about_blank": true,
+      "run_at": "document_idle"
+    }
+  ],
   "commands": {
     "rewrite": {
-      "suggested_key": { "default": "Alt+Shift+F" },
+      "suggested_key": {
+        "default": "Alt+Shift+F"
+      },
       "description": "Rewrite the text box you're typing in, with the last tone"
     }
   }

@@ -82,8 +82,15 @@
   <h2>About</h2>
   <div class="card">
     <div id="version">Tone Fixer</div>
+    <div id="updateNew" hidden style="margin-top:8px">
+      <strong>Version <span id="newVersion"></span> is ready.</strong> <span class="muted" id="newNotes"></span>
+      <p style="margin:8px 0 0"><a class="btn" id="download" href="#" style="display:inline-grid;place-items:center;text-decoration:none">Download</a></p>
+      <p class="muted" style="margin:8px 0 0">Unzip it over your current <code>tone-fixer</code> folder (replace the files),
+        then click ↻ on Tone Fixer in <code>chrome://extensions</code>. Settings and keys stay.</p>
+    </div>
+    <p class="muted" style="margin:6px 0 0"><span id="updateState"></span> <a href="#" id="checkNow">Check now</a></p>
     <p class="muted" style="margin:6px 0 0">Your keys are stored in this browser only (not encrypted on disk, so use it on your own
-      computer). Updates: load the new folder in <code>chrome://extensions</code>.</p>
+      computer).</p>
   </div>
 </main>
 <script type="module" src="options.js"></script>

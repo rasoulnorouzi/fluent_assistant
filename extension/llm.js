@@ -181,3 +181,29 @@ export function currentModel(provider, providerId, s) {
   const list = modelList(provider, providerId, s);
   return list.includes(s.models?.[providerId]) ? s.models[providerId] : list[0];
 }
+
+// ---------- updates (newer tones/models from the repo's `updates` branch) ----------
+
+const validTones = (t) => typeof t?.system === "string" && Array.isArray(t.tones) && t.tones.length > 0 &&
+  t.tones.every((x) => x && x.id && x.label && x.letter && x.style) && t.tones.some((x) => x.id === t.defaultTone);
+const validProviders = (p) => p && p.providers && p.providers[p.defaultProvider] && p.maxTokens &&
+  Object.values(p.providers).every((x) => x.url && x.format && Array.isArray(x.models) && x.models.length > 0);
+
+/**
+ * Config to use: the downloaded files when they're valid and not older (by `version`) than the ones
+ * shipped in the extension, else the shipped ones. Each file is chosen on its own.
+ */
+export function chooseConfig(bundled, remote) {
+  const newer = (r, b) => (r.version ?? 0) >= (b.version ?? 0);
+  return {
+    tones: validTones(remote?.tones) && newer(remote.tones, bundled.tones) ? remote.tones : bundled.tones,
+    providers: validProviders(remote?.providers) && newer(remote.providers, bundled.providers) ? remote.providers : bundled.providers,
+  };
+}
+
+/** "0.10.0" > "0.9.3". */
+export function isNewerVersion(a, b) {
+  const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+  return false;
+}

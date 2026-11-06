@@ -1,9 +1,11 @@
 // Settings page: provider, model, key (+ Test), tone. Same choices as the Android Settings screen.
-import { buildBody, stream, cleanKey, modelList, currentModel } from "./llm.js";
+import { buildBody, stream, cleanKey, modelList, currentModel, chooseConfig, isNewerVersion } from "./llm.js";
 
 const $ = (id) => document.getElementById(id);
-const [tonesCfg, providersCfg] = await Promise.all(["tones.json", "providers.json"].map((f) => fetch(f).then((r) => r.json())));
-const cfg = { tones: tonesCfg, providers: providersCfg };
+// Same choice as the service worker: shipped tones/models, or newer downloaded ones.
+const [bundledTones, bundledProviders] = await Promise.all(["tones.json", "providers.json"].map((f) => fetch(f).then((r) => r.json())));
+const cfg = chooseConfig({ tones: bundledTones, providers: bundledProviders }, (await chrome.storage.local.get("remoteCfg")).remoteCfg);
+const tonesCfg = cfg.tones, providersCfg = cfg.providers;
 const providers = providersCfg.providers;
 
 let s = await chrome.storage.local.get({ provider: null, tone: null, models: {}, modelLists: {}, keys: {}, keyOk: {} });
@@ -104,5 +106,29 @@ chrome.storage.onChanged.addListener((changes) => {
 const cmd = (await chrome.commands.getAll()).find((c) => c.name === "rewrite");
 $("shortcut").textContent = cmd?.shortcut || "not set";
 $("shortcuts").addEventListener("click", (e) => { e.preventDefault(); chrome.tabs.create({ url: "chrome://extensions/shortcuts" }); });
-$("version").textContent = `Tone Fixer ${chrome.runtime.getManifest().version}`;
+// ---------- About & updates ----------
+
+const VERSION = chrome.runtime.getManifest().version;
+function renderUpdate(info) {
+  const { latest, lastCheck } = info || {};
+  const fresh = latest && isNewerVersion(latest.version, VERSION);
+  $("version").textContent = `Tone Fixer ${VERSION}`;
+  $("updateNew").hidden = !fresh;
+  if (fresh) {
+    $("newVersion").textContent = latest.version;
+    $("newNotes").textContent = latest.notes || "";
+    $("download").href = new URL(latest.zip, "https://raw.githubusercontent.com/rasoulnorouzi/fluent_assistant/updates/extension/").href;
+  }
+  $("updateState").textContent = fresh ? "" : lastCheck
+    ? `Up to date. Tones and models update by themselves (last checked ${new Date(lastCheck).toLocaleString()}).`
+    : "Tones and models update by themselves.";
+}
+$("checkNow").addEventListener("click", async (e) => {
+  e.preventDefault();
+  $("updateState").textContent = "Checking…";
+  const info = await chrome.runtime.sendMessage({ type: "checkUpdates", force: true });
+  if (info?.remoteCfg && JSON.stringify(info.remoteCfg.tones) !== JSON.stringify(tonesCfg)) location.reload(); // show new tones
+  renderUpdate(info);
+});
+renderUpdate(await chrome.runtime.sendMessage({ type: "checkUpdates", force: false }).catch(() => null));
 render();

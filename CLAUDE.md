@@ -41,6 +41,7 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 
 - 2026-11-06 User: tones aren't good enough and overlap; "feel free to add or remove"; wants to add/remove models in Settings; then "go ahead and do it, we check at the end". Taken as approval of: new tone set, model add/remove, extension update option B (auto config + "new version" notice), proposed in chat.
 - 2026-11-06 New tone set (8): Grammar only, Daily, Casual, Polite (new), Work chat, Email (was "Formal email", id stays `formal`), Firm (new), Shorter. Friendly removed (overlapped Casual/Polite). Chosen from a live eval: v1 → v4 prompts, see shared/eval/.
+- 2026-11-06 Extension updates (option B): every 6 h (and on browser start / options page) the service worker reads `updates` branch `shared/tones.json`, `shared/providers.json` and `extension/latest.json`. Downloaded config is used only if valid and its `version` ≥ the shipped one (bump `version` in tones/providers.json when the FORMAT changes). Newer extension version → "NEW" badge + Download in options. `extension/publish.sh config|"notes"`.
 ## Preferences
 - 2026-11-05 Speed is the top priority (direct API calls, streaming, pre-warm, thinking off, short fixed prompt).
 - 2026-11-05 Wants a hand-made, non-generic look ("no AI slop") for the UI and logo.

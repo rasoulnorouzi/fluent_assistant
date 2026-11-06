@@ -1,13 +1,43 @@
 // Service worker: holds the settings, makes the API calls (streaming) and sends the text back to
 // the page over a port. Pages never see the API key.
-import { buildBody, stream, cleanKey, currentModel } from "./llm.js";
+import { buildBody, stream, cleanKey, currentModel, chooseConfig, isNewerVersion } from "./llm.js";
 
 let cfgPromise = null;
-/** {tones: shared/tones.json, providers: shared/providers.json}, copied in by pack.sh. */
-export function config() {
-  cfgPromise ??= Promise.all(["tones.json", "providers.json"].map((f) => fetch(chrome.runtime.getURL(f)).then((r) => r.json())))
-    .then(([tones, providers]) => ({ tones, providers }));
+/**
+ * {tones, providers}: the copies shipped in the extension (pack.sh), or newer ones downloaded from
+ * the repo's `updates` branch (see checkUpdates), whichever chooseConfig picks.
+ */
+function config() {
+  cfgPromise ??= (async () => {
+    const [tones, providers] = await Promise.all(["tones.json", "providers.json"].map((f) => fetch(chrome.runtime.getURL(f)).then((r) => r.json())));
+    const { remoteCfg } = await chrome.storage.local.get("remoteCfg");
+    return chooseConfig({ tones, providers }, remoteCfg);
+  })();
   return cfgPromise;
+}
+
+// ---------- updates: newer tones/models are used by themselves; a new version shows "NEW" ----------
+
+const UPDATES = "https://raw.githubusercontent.com/rasoulnorouzi/fluent_assistant/updates/";
+
+async function checkUpdates(force = false) {
+  const { lastCheck = 0 } = await chrome.storage.local.get("lastCheck");
+  if (!force && Date.now() - lastCheck < 6 * 3600_000) return;
+  await chrome.storage.local.set({ lastCheck: Date.now() });
+  // The query string sidesteps caches between us and GitHub (raw files are cached ~5 min).
+  const get = (path) => fetch(`${UPDATES}${path}?t=${Math.floor(Date.now() / 60_000)}`, { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const [tones, providers, latest] = await Promise.all([get("shared/tones.json"), get("shared/providers.json"), get("extension/latest.json")]);
+  if (tones && providers) { await chrome.storage.local.set({ remoteCfg: { tones, providers, at: Date.now() } }); cfgPromise = null; }
+  if (latest?.version) await chrome.storage.local.set({ latest });
+  await showBadge();
+}
+
+async function showBadge() {
+  const { latest } = await chrome.storage.local.get("latest");
+  const fresh = latest && isNewerVersion(latest.version, chrome.runtime.getManifest().version);
+  await chrome.action.setBadgeText({ text: fresh ? "NEW" : "" });
+  if (fresh) await chrome.action.setBadgeBackgroundColor({ color: "#A35A3A" });
 }
 
 /** Stored settings: {provider, tone, models: {gemini: picked id}, modelLists: {gemini: [ids]}, keys: {gemini: key}}. */
@@ -53,6 +83,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     const cur = pick(cfg, s);
     switch (msg.type) {
       case "state": // what the page needs to draw the bubble, menu and card
+        checkUpdates(); // at most every 6 hours
         return reply({ tones: cfg.tones.tones.map(({ id, label, letter }) => ({ id, label, letter })), tone: cur.tone.id });
       case "warm": { // open DNS + TLS early, so the real request reuses the connection
         const url = cur.provider.warmUrl;
@@ -65,6 +96,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
       case "options":
         chrome.runtime.openOptionsPage();
         return reply({});
+      case "checkUpdates": // from the options page
+        await checkUpdates(msg.force);
+        return reply(await chrome.storage.local.get(["latest", "lastCheck", "remoteCfg"]));
       default:
         return reply({});
     }
@@ -77,4 +111,8 @@ chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command === "rewrite" && tab?.id != null) chrome.tabs.sendMessage(tab.id, { type: "run" }).catch(() => {});
 });
-chrome.runtime.onInstalled.addListener(({ reason }) => { if (reason === "install") chrome.runtime.openOptionsPage(); });
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  if (reason === "install") chrome.runtime.openOptionsPage();
+  checkUpdates(true);
+});
+chrome.runtime.onStartup.addListener(() => checkUpdates());
