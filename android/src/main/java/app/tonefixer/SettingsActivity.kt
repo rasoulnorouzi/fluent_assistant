@@ -27,7 +27,8 @@ class SettingsActivity : Activity() {
     private lateinit var p: Ui.Palette
     private lateinit var root: LinearLayout
     private var keyField: EditText? = null
-    internal var editModels = false // internal: set by the screenshot test
+    internal var editModels = false
+    private var bubbleBack = false // internal: set by the screenshot test
     private var testStatus = ""
 
     // In-app update state (PLAN.md §4.7). The section redraws on its own, so a background check
@@ -68,6 +69,8 @@ class SettingsActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        // Opening the app brings the bubble back after it was dropped on ✕.
+        if (!prefs.bubbleOn) { prefs.bubbleOn = true; bubbleBack = true }
         build()
         if (installWhenAllowed && packageManager.canRequestPackageInstalls()) { installWhenAllowed = false; startUpdate() }
         else if (System.currentTimeMillis() - prefs.lastUpdateCheck > 20 * 3600_000L) checkUpdate(manual = false)
@@ -135,6 +138,9 @@ class SettingsActivity : Activity() {
                 open(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
             })
         }
+        if (bubbleBack) root.addView(small("The bubble is back on. Drag it to ✕ at the bottom of the screen to turn it off again.").apply {
+            setTextColor(p.primary)
+        }, spaced(12))
         val card = card()
         card.addView(label("Setup · ${steps.count { it.second }} of ${steps.size} done"))
         steps.forEach { (title, done, action) -> card.addView(stepRow(title, done, action)) }
@@ -230,7 +236,8 @@ class SettingsActivity : Activity() {
             minLines = 3; gravity = Gravity.TOP or Gravity.START
         }, spaced(8))
 
-        root.addView(small("Hold the bubble to pick another tone. Your keys stay on this phone, encrypted."), spaced(20))
+        root.addView(small("Hold the bubble to pick another tone. Drag it to move it, or onto ✕ at the bottom to turn it off " +
+            "(opening this app turns it back on). Your keys stay on this phone, encrypted."), spaced(20))
 
         // About & updates
         root.addView(label("About & updates"), spaced(28))
@@ -254,6 +261,10 @@ class SettingsActivity : Activity() {
                   else Ui.chip(this, p, "Check for updates", false) { checkUpdate(manual = true) }
         btn.isEnabled = !updBusy; btn.alpha = if (updBusy) 0.5f else 1f
         box.addView(btn, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(10) })
+        box.addView(small("Uninstall Tone Fixer").apply {
+            setTextColor(p.warn); minHeight = dp(44); gravity = Gravity.CENTER_VERTICAL
+            setOnClickListener { open(Intent(Intent.ACTION_DELETE, Uri.fromParts("package", packageName, null))) }
+        }, spaced(6))
         if (newer && updError) box.addView(small("Download in browser ↗").apply {
             setTextColor(p.primary); minHeight = dp(44); gravity = Gravity.CENTER_VERTICAL
             setOnClickListener { open(Intent(Intent.ACTION_VIEW, Uri.parse(info!!.apkUrl))) }

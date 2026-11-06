@@ -38,6 +38,7 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (!::overlay.isInitialized) return
+        if (!prefs.bubbleOn) { overlay.hideBubble(); return } // dropped on ✕; the app turns it back on
         val node = runCatching { findFocus(AccessibilityNodeInfo.FOCUS_INPUT) }.getOrNull()
         if (node != null && node.isEditable && !node.isPassword) {
             overlay.showBubble(cfg.tone(prefs.tone).letter)
@@ -66,6 +67,14 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
         applying = false
         snap = null
         overlay.closeCard()
+    }
+
+    override fun onDismiss() {
+        call?.cancel(); call = null
+        applying = false; snap = null
+        prefs.bubbleOn = false
+        overlay.removeBubble()
+        android.widget.Toast.makeText(this, "Tone Fixer is off. Open the Tone Fixer app to turn it back on.", android.widget.Toast.LENGTH_LONG).show()
     }
 
     override fun onOpenSettings() {

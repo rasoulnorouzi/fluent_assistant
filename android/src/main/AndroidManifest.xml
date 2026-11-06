@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- In-app updates (Settings → About & updates). Android still asks before every install. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- The "Uninstall Tone Fixer" button in Settings opens Android's uninstall prompt. -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
     <application
         android:label="Tone Fixer"

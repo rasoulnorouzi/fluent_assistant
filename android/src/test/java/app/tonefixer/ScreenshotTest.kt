@@ -49,6 +49,7 @@ class ScreenshotTest {
             override fun onApply() {}
             override fun onCancel() {}
             override fun onOpenSettings() {}
+            override fun onDismiss() {}
         }).apply { setTones(cfg.tones) }
     }
 
@@ -77,6 +78,18 @@ class ScreenshotTest {
         save(bubbleView(), "bubble")
         setState(Overlay.State.WORKING)
         save(bubbleView(), "bubble-working")
+    }
+
+    @Test fun dropTarget() = overlay().run {
+        val t = targetView()
+        t.layoutParams = android.view.ViewGroup.LayoutParams(Ui.dp(t.context, 96), Ui.dp(t.context, 96))
+        save(t, "drop-target")
+    }
+
+    @Test fun openingTheAppTurnsTheBubbleBackOn() {
+        val prefs = Prefs(app()).apply { bubbleOn = false; lastUpdateCheck = System.currentTimeMillis() }
+        Robolectric.buildActivity(SettingsActivity::class.java).setup()
+        org.junit.Assert.assertTrue(prefs.bubbleOn)
     }
 
     @Test fun launcherIcon() {

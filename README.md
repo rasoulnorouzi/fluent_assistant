@@ -31,7 +31,12 @@ server, no account and no tracking. The key is stored encrypted on the phone.
 4. **Try it** in the "Try it here" box at the bottom of Tone Fixer, then in any app.
 
 **Using it:** tap the bubble to rewrite with the current tone. Hold it to pick another tone. Drag
-it up or down to move it. If you select part of the text first, only the selection is rewritten.
+it to move it (it snaps to the nearer side). If you select part of the text first, only the
+selection is rewritten.
+
+**Turning it off:** drag the bubble onto the ✕ that appears at the bottom of the screen. It stays
+off everywhere until you open the Tone Fixer app again, which turns it back on. To remove the app:
+Tone Fixer → About & updates → **Uninstall Tone Fixer** (or long-press its icon → Uninstall).
 
 **Updating:** Tone Fixer → About & updates (see below). Settings and keys are kept.
 

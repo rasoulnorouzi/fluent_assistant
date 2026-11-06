@@ -39,6 +39,8 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         fun onApply()
         fun onCancel()
         fun onOpenSettings()
+        /** The bubble was dropped on ✕: turn it off until the app is opened again. */
+        fun onDismiss()
     }
 
     private val wm = ctx.getSystemService(WindowManager::class.java)
@@ -50,24 +52,27 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
 
     // ---------- bubble ----------
 
+    private val size = dp(48)          // the circle
+    private val win = dp(56)           // its window: room for the badge to stick out
+    private val margin = dp(6)         // gap to the screen edge
+
     private val circle = View(ctx)
-    private val wave = ImageView(ctx).apply { setImageResource(R.drawable.ic_wave) }
+    private val wave = ImageView(ctx).apply {
+        setImageResource(R.drawable.ic_wave); scaleType = ImageView.ScaleType.FIT_CENTER
+        setPadding(dp(11), dp(11), dp(11), dp(11))
+    }
     private val badge = TextView(ctx).apply {
-        textSize = 11f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+        textSize = 10f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
         setTextColor(p.cream); background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(p.clayDeep) }
     }
     private val bubble = FrameLayout(ctx).apply {
-        val size = dp(56)
         addView(circle, FrameLayout.LayoutParams(size, size, Gravity.BOTTOM or Gravity.START))
         addView(wave, FrameLayout.LayoutParams(size, size, Gravity.BOTTOM or Gravity.START))
-        wave.scaleType = ImageView.ScaleType.CENTER
-        addView(badge, FrameLayout.LayoutParams(dp(22), dp(22), Gravity.TOP or Gravity.END))
-        setPadding(0, 0, 0, 0)
-        contentDescription = "Tone Fixer"
+        addView(badge, FrameLayout.LayoutParams(dp(19), dp(19), Gravity.TOP or Gravity.END))
+        contentDescription = "Tone Fixer. Tap to rewrite, hold for tones, drag to the X at the bottom to turn off."
     }
-    private val bubbleParams = params(dp(64), dp(64)).apply {
-        gravity = Gravity.TOP or Gravity.END
-        x = dp(6)
+    private val bubbleParams = params(win, win).apply {
+        gravity = Gravity.TOP or Gravity.START
         y = prefs.bubbleY.takeIf { it >= 0 } ?: (ctx.resources.displayMetrics.heightPixels * 0.45f).toInt()
     }
     private var bubbleShown = false
@@ -75,10 +80,20 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
 
     enum class State { IDLE, WORKING, ERROR }
 
+    private fun screenW(): Int =
+        if (android.os.Build.VERSION.SDK_INT >= 30) wm.currentWindowMetrics.bounds.width() else ctx.resources.displayMetrics.widthPixels
+    private fun screenH(): Int =
+        if (android.os.Build.VERSION.SDK_INT >= 30) wm.currentWindowMetrics.bounds.height() else ctx.resources.displayMetrics.heightPixels
+
+    /** x for the side the bubble lives on (it remembers left or right). */
+    private fun sideX() = if (prefs.bubbleRight) screenW() - win - margin else margin
+
     fun showBubble(letter: String) {
         badge.text = letter
         if (!bubbleShown) {
             setState(State.IDLE)
+            bubbleParams.x = sideX() // also right after a rotation
+            bubbleParams.y = bubbleParams.y.coerceIn(dp(24), screenH() - dp(120))
             runCatching { wm.addView(bubble, bubbleParams); bubbleShown = true }
         }
     }
@@ -86,6 +101,12 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
     fun hideBubble() {
         if (cardShown) return // keep it while a result is on screen
         hideMenu()
+        if (bubbleShown) { runCatching { wm.removeView(bubble) }; bubbleShown = false }
+    }
+
+    /** Hides the bubble even while the card is open (it was dropped on ✕). */
+    fun removeBubble() {
+        closeCard(); hideMenu(); hideTarget()
         if (bubbleShown) { runCatching { wm.removeView(bubble) }; bubbleShown = false }
     }
 
@@ -98,7 +119,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             shape = GradientDrawable.OVAL
             when (s) {
                 State.IDLE -> setColor(p.sage)
-                State.WORKING -> { setColor(0xFF4F6B55.toInt()); setStroke(dp(4), 0xFFC9D6CB.toInt()) }
+                State.WORKING -> { setColor(0xFF4F6B55.toInt()); setStroke(dp(3), 0xFFC9D6CB.toInt()) }
                 State.ERROR -> setColor(p.clayDeep)
             }
         }
@@ -114,42 +135,105 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         ObjectAnimator.ofFloat(bubble, View.TRANSLATION_X, 0f, -14f, 12f, -8f, 5f, 0f).setDuration(380).start()
     }
 
+    // ---------- the ✕ target shown while dragging ----------
+
+    private val targetSize = dp(64)
+    private val target = FrameLayout(ctx).apply {
+        val ring = View(ctx).apply { background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xE62B2A26.toInt()) } }
+        addView(ring, FrameLayout.LayoutParams(targetSize, targetSize, Gravity.CENTER))
+        addView(ImageView(ctx).apply { setImageResource(R.drawable.ic_close); setColorFilter(p.cream) },
+            FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER))
+        contentDescription = "Drop here to turn off the bubble"
+    }
+    private val targetParams = params(dp(96), dp(96)).apply {
+        gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+        flags = flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        y = dp(40)
+    }
+    private var targetShown = false
+    private var armed = false
+
+    private fun showTarget() {
+        if (targetShown) return
+        armed = false
+        target.scaleX = 1f; target.scaleY = 1f; target.alpha = 0f
+        runCatching { wm.addView(target, targetParams); targetShown = true }
+        target.animate().alpha(1f).setDuration(150).start()
+    }
+
+    private fun hideTarget() {
+        if (targetShown) { runCatching { wm.removeView(target) }; targetShown = false }
+        armed = false
+    }
+
+    /** Is the finger over the ✕? Grows the ✕ and buzzes once when it gets there. */
+    private fun updateArmed(rawX: Float, rawY: Float) {
+        if (!targetShown) return
+        val loc = IntArray(2); target.getLocationOnScreen(loc)
+        val cx = loc[0] + target.width / 2f; val cy = loc[1] + target.height / 2f
+        val now = Math.hypot((rawX - cx).toDouble(), (rawY - cy).toDouble()) < dp(72)
+        if (now != armed) {
+            armed = now
+            target.animate().scaleX(if (now) 1.25f else 1f).scaleY(if (now) 1.25f else 1f).setDuration(120).start()
+            if (now) target.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+        }
+    }
+
     init {
         bubble.setOnTouchListener(BubbleTouch())
     }
 
+    /** Tap = rewrite. Hold = tone menu. Drag = move it (snaps to the nearer side), or drop on ✕ to turn it off. */
     @SuppressLint("ClickableViewAccessibility")
     private inner class BubbleTouch : View.OnTouchListener {
         private val slop = ViewConfiguration.get(ctx).scaledTouchSlop
-        private var downY = 0f; private var startY = 0; private var dragging = false; private var longFired = false
+        private var downX = 0f; private var downY = 0f; private var startX = 0; private var startY = 0
+        private var dragging = false; private var longFired = false
         private val longPress = Runnable { longFired = true; bubble.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); showMenu() }
 
         override fun onTouch(v: View, e: MotionEvent): Boolean {
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    downY = e.rawY; startY = bubbleParams.y; dragging = false; longFired = false
+                    downX = e.rawX; downY = e.rawY; startX = bubbleParams.x; startY = bubbleParams.y
+                    dragging = false; longFired = false
                     bubble.alpha = 1f
                     main.postDelayed(longPress, 450)
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val dy = e.rawY - downY
-                    if (!dragging && abs(dy) > slop && !longFired) { dragging = true; main.removeCallbacks(longPress) }
+                    val dx = e.rawX - downX; val dy = e.rawY - downY
+                    if (!dragging && Math.hypot(dx.toDouble(), dy.toDouble()) > slop && !longFired) {
+                        dragging = true; main.removeCallbacks(longPress); hideMenu(); showTarget()
+                    }
                     if (dragging) {
-                        val maxY = ctx.resources.displayMetrics.heightPixels - dp(120)
-                        bubbleParams.y = (startY + dy).toInt().coerceIn(dp(24), maxY)
+                        bubbleParams.x = (startX + dx).toInt().coerceIn(0, screenW() - win)
+                        bubbleParams.y = (startY + dy).toInt().coerceIn(0, screenH() - win)
                         runCatching { wm.updateViewLayout(bubble, bubbleParams) }
+                        updateArmed(e.rawX, e.rawY)
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     main.removeCallbacks(longPress)
                     if (!cardShown) bubble.alpha = 0.6f
                     when {
-                        dragging -> prefs.bubbleY = bubbleParams.y
+                        dragging && armed && e.actionMasked == MotionEvent.ACTION_UP -> { hideTarget(); cb.onDismiss() }
+                        dragging -> { hideTarget(); snapToSide(e.rawX) }
                         !longFired && e.actionMasked == MotionEvent.ACTION_UP -> { hideMenu(); cb.onTap() }
                     }
                 }
             }
             return true
+        }
+    }
+
+    /** Glides to the nearer screen edge and remembers that side and the height. */
+    private fun snapToSide(rawX: Float) {
+        prefs.bubbleRight = rawX > screenW() / 2f
+        bubbleParams.y = bubbleParams.y.coerceIn(dp(24), screenH() - dp(120))
+        prefs.bubbleY = bubbleParams.y
+        ValueAnimator.ofInt(bubbleParams.x, sideX()).apply {
+            duration = 180
+            addUpdateListener { bubbleParams.x = it.animatedValue as Int; if (bubbleShown) runCatching { wm.updateViewLayout(bubble, bubbleParams) } }
+            start()
         }
     }
 
@@ -180,9 +264,10 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             setOnTouchListener { _, e -> if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) hideMenu(); false }
         }
         val lp = params(-2, -2).apply {
-            gravity = Gravity.TOP or Gravity.END
+            // Opens beside the bubble, on the screen side the bubble is on.
+            gravity = Gravity.TOP or if (prefs.bubbleRight) Gravity.END else Gravity.START
             flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-            x = dp(6 + 64 - 4)
+            x = margin + win - dp(4)
             y = (bubbleParams.y - dp(170)).coerceAtLeast(dp(24))
         }
         runCatching { wm.addView(root, lp); menu = root }
@@ -376,6 +461,9 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
         PixelFormat.TRANSLUCENT,
     )
+
+    /** For tests: the ✕ target shown while dragging. */
+    internal fun targetView(): View = target
 
     /** For tests: the card's root view (null when closed). */
     internal fun cardView(): View? = card

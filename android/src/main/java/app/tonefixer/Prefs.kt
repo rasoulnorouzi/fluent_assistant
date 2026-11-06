@@ -26,6 +26,16 @@ class Prefs(ctx: Context) {
         get() = sp.getString("tone", null)
         set(v) = sp.edit().putString("tone", v).apply()
 
+    /** False after the bubble was dropped on ✕; opening the app sets it back to true. */
+    var bubbleOn: Boolean
+        get() = sp.getBoolean("bubbleOn", true)
+        set(v) = sp.edit().putBoolean("bubbleOn", v).apply()
+
+    /** Which screen edge the bubble sits on (it snaps to the nearer one after a drag). */
+    var bubbleRight: Boolean
+        get() = sp.getBoolean("bubbleRight", true)
+        set(v) = sp.edit().putBoolean("bubbleRight", v).apply()
+
     /** Bubble's vertical position in px from the top, or -1 for "not moved yet". */
     var bubbleY: Int
         get() = sp.getInt("bubbleY", -1)
