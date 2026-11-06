@@ -12,10 +12,10 @@ server, no account and no tracking. The key is stored encrypted on the phone.
 
 ## Install on your phone
 
-1. **Get the APK.** Open the repo's **Actions** tab → the latest green "Android" run →
-   **Artifacts** → `tone-fixer-apk` (a zip; inside, use `ToneFixer-release.apk`, or
-   `ToneFixer-debug.apk` if there is no release one yet). Once a version is tagged (`v0.1.0`, …),
-   the APK is also attached to the **Releases** page, which is easier to open on the phone.
+1. **Get the APK.** The latest one is always at
+   <https://raw.githubusercontent.com/rasoulnorouzi/fluent_assistant/updates/android/latest.json>
+   (the `apk` name in it, same folder), or use the file sent to you in chat. After the first
+   install, the app updates itself (see "Updates" below).
 2. **Install it.** Open the APK on the phone. Android asks you to allow "Install unknown apps" for
    the browser or Files app: allow it, then tap Install.
 3. **Open Tone Fixer and follow the checklist at the top:**
@@ -33,34 +33,42 @@ server, no account and no tracking. The key is stored encrypted on the phone.
 **Using it:** tap the bubble to rewrite with the current tone. Hold it to pick another tone. Drag
 it up or down to move it. If you select part of the text first, only the selection is rewritten.
 
-**Updating:** install the newer APK over the old one; settings and keys are kept. (This works only
-with release APKs signed by the same key, see below. Debug APKs from different CI runs need an
-uninstall first.)
+**Updating:** Tone Fixer → About & updates (see below). Settings and keys are kept.
 
-## Signing (one-time, so updates install over each other)
+## Updates (inside the app)
 
-Every release APK must be signed with the **same** key. Make it once on your computer (you need
-Java's `keytool`, which ships with Android Studio or any JDK):
+Open Tone Fixer → scroll to **About & updates**. The app checks by itself when you open it (at
+most once a day), or tap **Check for updates**. When a new version is ready, tap **Update to …**:
+it downloads, checks the file, and Android shows its usual "Update this app?" screen. Your
+settings and keys stay. The very first time, Android asks you to allow **Install unknown apps**
+for Tone Fixer (one switch, then come back: the update continues by itself).
+
+New versions live on this repo's `updates` branch (`android/latest.json` + the APK). To publish
+one (needs the release key, below):
 
 ```sh
-keytool -genkeypair -keystore tonefixer.jks -alias tonefixer -keyalg RSA -keysize 2048 -validity 10000
-# answer the questions; remember the password
-
-base64 -w0 tonefixer.jks > tonefixer.jks.b64   # macOS: base64 -i tonefixer.jks -o tonefixer.jks.b64
+cd android
+./publish-update.sh "What's new, in one short line"
 ```
 
-Then on GitHub: repo → **Settings → Secrets and variables → Actions → New repository secret**, four times:
+It builds a signed release APK with the next version number, runs the tests, and pushes both
+files to the `updates` branch. Phones see it within a few minutes.
 
-| Name | Value |
-|---|---|
-| `TF_KEYSTORE_BASE64` | the contents of `tonefixer.jks.b64` |
-| `TF_KEYSTORE_PASSWORD` | the keystore password |
-| `TF_KEY_ALIAS` | `tonefixer` |
-| `TF_KEY_PASSWORD` | the key password (same as above if you pressed Enter) |
+## Signing key (one per app, keep it forever)
 
-**Back up `tonefixer.jks` and its password** (e.g. in your password manager). If it's lost, the
-next APK can't update the installed one: you'd have to uninstall and set the app up again.
-**Never commit it.** This repo is public, and `.gitignore` already blocks `*.jks`.
+Every APK must be signed with the **same** key, or Android refuses to update the app. The key was
+made once (`tonefixer-release.jks`, alias `tonefixer`, certificate SHA-256 starting
+`37:74:E3:B1`) and you were given the file and its password.
+
+- **Back it up** (password manager, plus a copy off your laptop). If it's lost, the next APK
+  can't update the installed one: you'd have to uninstall and set the app up again.
+- **Never commit it.** This repo is public, and `.gitignore` blocks `*.jks` and `keystore.properties`.
+- Local builds: put a `keystore.properties` next to `android/build.gradle.kts`:
+  `TF_KEYSTORE_FILE=/path/to/tonefixer-release.jks`, `TF_KEYSTORE_PASSWORD=…`,
+  `TF_KEY_ALIAS=tonefixer`, `TF_KEY_PASSWORD=…` (same password).
+- GitHub Actions (once it runs): repo → **Settings → Secrets and variables → Actions**, add
+  `TF_KEYSTORE_BASE64` (`base64 -w0 tonefixer-release.jks`; macOS: `base64 -i tonefixer-release.jks`),
+  `TF_KEYSTORE_PASSWORD`, `TF_KEY_ALIAS` = `tonefixer`, `TF_KEY_PASSWORD`.
 
 ## Build it yourself (optional)
 
