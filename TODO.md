@@ -1,7 +1,7 @@
 # TODO
 
 **Progress: Phase 0–2d done except your device checks · Phase 3 (iOS): 1/7 · Phase 4 (translate): 4/6**
-**Current step:** you update to 0.2.20 inside the app and try the translation; next T.6 (Chrome).
+**Current step:** you enable GitHub Pages once (Settings → Pages → main → /docs); then open the web app on the iPhone.
 
 ## Phase 0: Planning and design
 - [x] 0.1 Ask clarifying questions (build path, tone UX, apply flow, look, phones, languages, tones)
@@ -80,6 +80,10 @@
 - [x] T.4 Android: «فارسی» and «ترجمه‌ی صفحه» in the bubble menu; select text / Share → «ترجمه به فارسی»
 - [ ] T.5 Tests + screenshots ✓ (Android 59 tests); 0.2.20 published ✓; waiting: you update inside the app (first in-app update) and try it
 - [ ] T.6 Chrome: select text → Persian (menu + card)
+
+## Phase 3w: Web app on GitHub Pages (asked 2026-11-07)
+- [x] W.1 `docs/` web app: paste → tone or «فارسی» → streaming result → copy; Claude default; key in the browser only; installable on the home screen
+- [x] W.2 Tests (Node 17 + Chromium at iPhone size), live Claude check (Daily 1.4 s, Persian 1.4 s); merge to main · waiting: you enable Pages once
 
 ## Phase 3: iOS (planned)
 - [x] 3.1 `ios/SHORTCUT.md`: two shortcuts (Tone Fixer = Daily tone, Persian meaning), Share menu / AssistiveTouch / Back Tap; request tested live on Claude Haiku 5.5 (0.7–0.8 s)

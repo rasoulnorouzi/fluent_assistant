@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "defaultProvider": "gemini",
+  "providers": {
+    "gemini": {
+      "label": "Google Gemini",
+      "format": "gemini",
+      "url": "https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse",
+      "warmUrl": "https://generativelanguage.googleapis.com/",
+      "keyHeader": "x-goog-api-key",
+      "headers": {},
+      "browserHeaders": {},
+      "keyHelp": "https://aistudio.google.com/apikey",
+      "models": [
+        {
+          "id": "gemini-3.5-flash-lite",
+          "label": "Gemini 3.5 Flash-Lite",
+          "extra": {
+            "generationConfig": {
+              "thinkingConfig": {
+                "thinkingLevel": "minimal"
+              }
+            }
+          }
+        },
+        {
+          "id": "gemini-3.1-flash-lite",
+          "label": "Gemini 3.1 Flash-Lite",
+          "extra": {
+            "generationConfig": {
+              "thinkingConfig": {
+                "thinkingLevel": "minimal"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "claude": {
+      "label": "Anthropic Claude",
+      "format": "claude",
+      "url": "https://api.anthropic.com/v1/messages",
+      "warmUrl": "https://api.anthropic.com/",
+      "keyHeader": "x-api-key",
+      "headers": {
+        "anthropic-version": "2026-10-21"
+      },
+      "browserHeaders": {
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      "keyHelp": "https://console.anthropic.com/settings/keys",
+      "models": [
+        {
+          "id": "claude-haiku-5-5",
+          "label": "Claude Haiku 5.5",
+          "extra": {
+            "thinking": {
+              "type": "disabled"
+            },
+            "output_config": {
+              "effort": "low"
+            }
+          }
+        },
+        {
+          "id": "claude-sonnet-5-5",
+          "label": "Claude Sonnet 5.5",
+          "extra": {
+            "thinking": {
+              "type": "between_tools"
+            },
+            "output_config": {
+              "effort": "low"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "maxTokens": {
+    "charsPerToken": 3,
+    "multiplier": 3,
+    "base": 150,
+    "min": 200,
+    "cap": 4096
+  }
+}
