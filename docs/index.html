@@ -92,7 +92,10 @@
     <div class="card-top"><span class="card-title" id="cardTitle"></span><span class="model" id="cardModel"></span></div>
     <div class="result" id="result" dir="auto"></div>
     <div class="status" id="status" hidden></div>
-    <button class="big" id="copy" disabled>Copy</button>
+    <div class="row">
+      <button class="big ghost" id="again" disabled>↻ Another</button>
+      <button class="big" id="copy" disabled>Copy</button>
+    </div>
   </section>
 
   <button class="install" id="install" hidden>Install the app</button>
@@ -134,6 +137,17 @@ function renderChips() {
 
 // ---------- run ----------
 let abort = null, result = "";
+// Same text + same tone again = a slightly different version: the earlier answers go along as
+// chat turns, and the model is asked for a new wording that keeps the meaning and tone.
+let prev = { text: null, tone: null, outs: [] };
+function withEarlier(body, format, outs) {
+  const ask = "Write it once more with slightly different wording: same meaning, tone and length, " +
+    "not very different from before. Reply with the rewritten message only.";
+  if (format === "claude") for (const o of outs) body.messages.push({ role: "assistant", content: o }, { role: "user", content: ask });
+  else for (const o of outs) body.contents.push({ role: "model", parts: [{ text: o }] }, { role: "user", parts: [{ text: ask }] });
+  return body;
+}
+
 async function run(id) {
   const text = $("input").value;
   if (!text.trim()) { $("input").focus(); return; }
@@ -148,21 +162,24 @@ async function run(id) {
   $("cardTitle").textContent = tone.label;
   $("cardModel").textContent = label(p, model);
   setStatus("");
-  $("copy").disabled = true;
+  $("copy").disabled = true; $("again").disabled = true;
   render(true);
   if (!key) { setStatus(`Add your ${p.label.split(" ").pop()} API key in Settings (⚙︎).`, true); render(false); return; }
 
-  const out = await stream(p, model, key, buildBody(cfg, p, model, tone, text), mine.signal, (piece) => {
+  if (prev.text !== text || prev.tone !== id) prev = { text, tone: id, outs: [] };
+  const body = withEarlier(buildBody(cfg, p, model, tone, text), p.format, prev.outs.slice(-3));
+  const out = await stream(p, model, key, body, mine.signal, (piece) => {
     if (abort !== mine) return;
     result += piece; render(true);
   });
   if (abort !== mine || out.stop === "cancelled") return;
-  render(false);
+  render(false); $("again").disabled = false;
   if (out.error) setStatus(out.error, true);
   else if (!result.trim()) setStatus("No answer from the model. Try again.", true);
   else {
     if (out.stop === "cut") setStatus("Cut off: the answer hit the length limit.");
     $("copy").disabled = false;
+    prev.outs.push(result.trim());
   }
 }
 
@@ -172,6 +189,7 @@ function render(streaming) {
 }
 function setStatus(msg, err = false) { $("status").hidden = !msg; $("status").textContent = msg; $("status").className = `status${err ? " err" : ""}`; }
 
+$("again").addEventListener("click", () => active && run(active));
 $("copy").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(result.trim()); $("copy").textContent = "Copied ✓"; setTimeout(() => { $("copy").textContent = "Copy"; }, 1800); }
   catch { setStatus("Couldn't copy: select the text above and copy it.", true); }
