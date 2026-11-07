@@ -33,6 +33,21 @@ export function buildBody(cfg, provider, modelId, tone, text, translate = false)
   return body;
 }
 
+export const AGAIN = "Write it once more with slightly different wording: same meaning, tone and length, " +
+  "not very different from before. Reply with the rewritten message only.";
+
+/**
+ * "Another version": the earlier answers for the same text and tone go along as chat turns, each
+ * followed by AGAIN, so the model writes a slightly different version. Same as Llm.withEarlier.
+ */
+export function withEarlier(body, format, earlier) {
+  for (const o of earlier) {
+    if (format === "claude") body.messages.push({ role: "assistant", content: o }, { role: "user", content: AGAIN });
+    else body.contents.push({ role: "model", parts: [{ text: o }] }, { role: "user", parts: [{ text: AGAIN }] });
+  }
+  return body;
+}
+
 const isObj = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
 /** Objects merge key by key; anything else replaces. Mutates and returns `base`. */

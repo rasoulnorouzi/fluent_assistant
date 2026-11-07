@@ -55,6 +55,7 @@ class ScreenshotTest {
             override fun onNextModel() {}
             override fun onTranslate(screen: Boolean) {}
             override fun onPickTranslateMode(id: String) {}
+            override fun onAnother() {}
         }).apply {
             setTones(cfg.tones)
             setTranslateModes(cfg.translateModes)

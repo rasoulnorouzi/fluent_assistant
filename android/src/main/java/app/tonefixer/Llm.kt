@@ -105,6 +105,25 @@ object Llm {
         return body
     }
 
+    const val AGAIN = "Write it once more with slightly different wording: same meaning, tone and length, " +
+        "not very different from before. Reply with the rewritten message only."
+
+    /**
+     * "Another version": the earlier answers for the same text and tone go along as chat turns, each
+     * followed by [AGAIN], so the model writes a slightly different version. Same as llm.js withEarlier.
+     */
+    fun withEarlier(body: JSONObject, format: String, earlier: List<String>): JSONObject {
+        for (o in earlier) when (format) {
+            "claude" -> body.getJSONArray("messages")
+                .put(JSONObject().put("role", "assistant").put("content", o))
+                .put(JSONObject().put("role", "user").put("content", AGAIN))
+            else -> body.getJSONArray("contents")
+                .put(JSONObject().put("role", "model").put("parts", JSONArray().put(JSONObject().put("text", o))))
+                .put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", AGAIN))))
+        }
+        return body
+    }
+
     /** Objects merge key by key; anything else replaces. Mutates and returns [base]. */
     fun deepMerge(base: JSONObject, extra: JSONObject): JSONObject {
         for (k in extra.keys()) {

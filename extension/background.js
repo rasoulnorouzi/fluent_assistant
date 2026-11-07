@@ -1,6 +1,6 @@
 // Service worker: holds the settings, makes the API calls (streaming) and sends the text back to
 // the page over a port. Pages never see the API key.
-import { buildBody, stream, cleanKey, currentModel, modelList, chooseConfig, isNewerVersion } from "./llm.js";
+import { buildBody, withEarlier, stream, cleanKey, currentModel, modelList, chooseConfig, isNewerVersion } from "./llm.js";
 
 let cfgPromise = null;
 /**
@@ -71,7 +71,7 @@ chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== "rewrite") return;
   const abort = new AbortController();
   port.onDisconnect.addListener(() => abort.abort());
-  port.onMessage.addListener(async ({ text, tone: toneId }) => {
+  port.onMessage.addListener(async ({ text, tone: toneId, earlier }) => {
     const send = (m) => { try { port.postMessage(m); } catch { /* page closed */ } };
     const cfg = await config();
     const s = await settings();
@@ -79,7 +79,9 @@ chrome.runtime.onConnect.addListener((port) => {
     const { provider, tone, model, key } = pick(cfg, s);
     send({ type: "using", label: labelOf(provider, model) }); // the card shows which model writes this
     if (!key) return send({ type: "end", error: `Add your ${provider.label.split(" ").pop()} API key in Tone Fixer settings.`, settings: true });
-    const out = await stream(provider, model, key, buildBody(cfg, provider, model, tone, text), abort.signal,
+    const earlierOk = Array.isArray(earlier) ? earlier.filter((x) => typeof x === "string").slice(-3) : [];
+    const body = withEarlier(buildBody(cfg, provider, model, tone, text), provider.format, earlierOk);
+    const out = await stream(provider, model, key, body, abort.signal,
       (piece) => send({ type: "text", text: piece }));
     if (out.stop !== "cancelled") send({ type: "end", ...out, settings: !!out.error?.includes("Settings") });
   });

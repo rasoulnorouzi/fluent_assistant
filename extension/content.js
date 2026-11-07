@@ -24,6 +24,7 @@
   const WAVE = "M3.5 12.6c2.4-4.2 5.4-4.2 7.8 0s5.4 4.2 7.8 0"; // same wave as the logo
   const CHECK = "M5 12.5l4.5 4.5L19 7.5";
   const CLOSE = "M6.5 6.5l11 11M17.5 6.5l-11 11";
+  const AGAIN = "M19.5 12a7.5 7.5 0 1 1-2.2-5.3M18 3v4.2h-4.2";
 
   const looksFarsi = (s) => /[؀-ۿﭐ-﷿]/.test(s);
   const keepOuterSpace = (input, out) => input.match(/^\s*/)[0] + out.trim() + input.match(/\s*$/)[0];
@@ -198,6 +199,8 @@
   .chip.sel { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 700; cursor: default; }
   .ok { flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: var(--on-primary);
         display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+  .again { flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--bg); color: var(--primary); display: grid; place-items: center; }
+  .again:disabled { opacity: .35; cursor: default; }
   .ok:disabled { opacity: .35; cursor: default; box-shadow: none; }
   [hidden] { display: none !important; }
   `;
@@ -256,6 +259,8 @@
     const body = h("div", { class: "body" });
     const status = h("div", { class: "status", hidden: true });
     const chips = h("div", { class: "chips" });
+    const again = h("button", { class: "again", "aria-label": "Another version", title: "Another version (slightly different)",
+      onclick: () => { if (!streaming) run(cardTone || tone, false); } }, icon(AGAIN, 22));
     const ok = h("button", { class: "ok", "aria-label": "Replace", title: "Replace the text (or press Alt+Shift+F again)",
       onclick: apply }, icon(CHECK, 24));
     const card = h("div", { class: "card", hidden: true, role: "dialog", "aria-label": "Tone Fixer", onpointerdown: (e) => {
@@ -265,11 +270,11 @@
         h("div", { class: "heading" }, h("div", { class: "titlerow" }, title, tag), model),
         h("button", { class: "x", "aria-label": "Cancel", title: "Cancel (Esc)", onclick: cancel }, icon(CLOSE, 20))),
       body, status,
-      h("div", { class: "foot" }, chips, ok));
+      h("div", { class: "foot" }, chips, again, ok));
 
     root.append(h("div", { class: "tf" }, bubble, menu, card));
     document.documentElement.append(host);
-    return { host, bubble, badge, menu, card, title, model, tag, body, status, chips, ok };
+    return { host, bubble, badge, menu, card, title, model, tag, body, status, chips, again, ok };
   }
   const ensureUi = () => (ui && ui.host.isConnected ? ui : (ui = buildUi()));
 
@@ -447,6 +452,9 @@
 
   // ---------- run ----------
 
+  let earlier = { key: null, outs: [] }; // earlier answers for the same text + tone
+  let runOuts = null;                     // where the running answer goes when it ends well
+
   async function run(toneId, fresh) {
     ensureUi();
     if (fresh) {
@@ -474,7 +482,11 @@
       else finish(m.stop === "cut" ? "Cut off: the answer hit the length limit." : null);
     });
     p.onDisconnect.addListener(() => { if (port === p) { port = null; fail("Lost the connection to Tone Fixer. Try again.", false); } });
-    p.postMessage({ text: snap.input, tone: toneId });
+    // Same text and tone again (bubble, chip or ↻) = a slightly different version.
+    if (earlier.key !== `${toneId}\u0000${snap.input}`) earlier = { key: `${toneId}\u0000${snap.input}`, outs: [] };
+    const outs = earlier.outs;
+    p.postMessage({ text: snap.input, tone: toneId, earlier: outs.slice(-3) });
+    runOuts = outs;
     if (toneId !== tone) { tone = toneId; setLetter(); }
   }
 
@@ -502,9 +514,9 @@
     renderModel(current?.label);
     ui.tag.hidden = !fromFarsi;
     ui.status.hidden = true;
-    ui.ok.disabled = true;
+    ui.ok.disabled = true; ui.again.disabled = true;
     ui.chips.replaceChildren(...[...tones].sort((a, b) => (a.id === toneId ? -1 : b.id === toneId ? 1 : 0)).map((x) =>
-      h("button", { class: `chip${x.id === toneId ? " sel" : ""}`, onclick: () => { if (x.id !== toneId) run(x.id, false); } }, x.label)));
+      h("button", { class: `chip${x.id === toneId ? " sel" : ""}`, onclick: () => { if (!streaming) run(x.id, false); } }, x.label)));
     ui.chips.scrollLeft = 0;
     renderBody();
     setBubble("working");
@@ -522,6 +534,7 @@
 
   async function useModel(x, rerun) {
     await send({ type: "setModel", provider: x.provider, model: x.model });
+    earlier = { key: null, outs: [] }; // a new model starts fresh, so models can be compared
     await loadState();
     if (rerun) run(cardTone || tone, false);
   }
@@ -553,6 +566,8 @@
     renderBody();
     status(note, false);
     ui.ok.disabled = !result.trim();
+    ui.again.disabled = false;
+    if (result.trim()) runOuts?.push(result.trim());
     setBubble("idle");
   }
 
@@ -561,6 +576,7 @@
     renderBody();
     status(msg, true, settingsLink);
     ui.ok.disabled = true;
+    ui.again.disabled = false;
     setBubble("error");
   }
 

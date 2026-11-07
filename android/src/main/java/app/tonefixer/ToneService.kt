@@ -33,6 +33,9 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
     /** What the card is doing: rewriting, or translating to Persian (own text, the screen, or text from another app). */
     private enum class Job { REWRITE, OWN, SCREEN, TEXT }
     private var job = Job.REWRITE
+    /** Earlier answers for the same text + tone ("another version"); [earlierKey] says which. */
+    private val earlier = mutableListOf<String>()
+    private var earlierKey: String? = null
     /** The text for SCREEN / TEXT translations (OWN uses [snap]). */
     private var source: String? = null
 
@@ -75,6 +78,10 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
         prefs.tone = id
         overlay.setLetter(cfg.tone(id).letter)
         rewrite(id, fresh = snap == null || !overlay.isCardShown() || job != Job.REWRITE)
+    }
+
+    override fun onAnother() {
+        if (snap != null && job == Job.REWRITE) rewrite(cfg.tone(prefs.tone).id, fresh = false)
     }
 
     override fun onCancel() {
@@ -160,6 +167,7 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
     override fun onPickModel(provider: String, model: String) {
         prefs.provider = provider
         prefs.setModel(provider, model)
+        earlier.clear() // a new model starts fresh, so models can be compared
         refreshModels()
         if (overlay.isCardShown() && job != Job.REWRITE && (snap != null || source != null)) translate(cfg.translateMode(prefs.translateMode).id)
         else if (overlay.isCardShown() && snap != null) rewrite(cfg.tone(prefs.tone).id, fresh = false) // compare on the same text
@@ -199,11 +207,14 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
         }
         val s = snap ?: return
         job = Job.REWRITE
-        run(cfg.tone(toneId), s.input, translate = false) { overlay.startCard(toneId, TextOps.looksFarsi(s.input)) }
+        // Same text and tone again (bubble, chip or ↻) = a slightly different version.
+        val k = toneId + "\u0000" + s.input
+        if (k != earlierKey) { earlierKey = k; earlier.clear() }
+        run(cfg.tone(toneId), s.input, translate = false, earlier = earlier.takeLast(3)) { overlay.startCard(toneId, TextOps.looksFarsi(s.input)) }
     }
 
     /** Streams one rewrite or translation of [input] into the card ([openCard] opens it in the right mode). */
-    private fun run(tone: Llm.Tone, input: String, translate: Boolean, openCard: () -> Unit) {
+    private fun run(tone: Llm.Tone, input: String, translate: Boolean, earlier: List<String> = emptyList(), openCard: () -> Unit) {
         val pr = cfg.provider(prefs.provider)
         val model = prefs.currentModel(pr)
         val key = prefs.key(pr.id)
@@ -217,7 +228,7 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
         result = StringBuilder()
         // A translation starts with a line naming the source language: shown in the header, not in the text.
         val lang = if (translate) TextOps.LanguageLine() else null
-        val body = Llm.buildBody(cfg, pr, model, tone, input, translate)
+        val body = Llm.withEarlier(Llm.buildBody(cfg, pr, model, tone, input, translate), pr.format, earlier)
         thread(name = "tonefixer-llm") {
             val out = Llm.stream(pr, model, key, body, c) { piece ->
                 main.post {
@@ -236,6 +247,7 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
                     out.stop == "cut" -> overlay.finish("Cut off: the answer hit the length limit.")
                     else -> overlay.finish(null)
                 }
+                if (!translate && out.error == null && out.text.isNotBlank()) this.earlier.add(out.text.trim())
             }
         }
     }

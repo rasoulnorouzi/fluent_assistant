@@ -45,6 +45,17 @@ test("claude body and browser header", () => {
   assert.equal(h["x-api-key"], "k");
 });
 
+test("another version: earlier answers as chat turns", () => {
+  const c = llm.withEarlier(llm.buildBody(cfg, claude, claude.models[0].id, tone("daily"), "hi"), "claude", ["Hi!", "Hey!"]);
+  assert.deepEqual(c.messages.map((m) => m.role), ["user", "assistant", "user", "assistant", "user"]);
+  assert.equal(c.messages[1].content, "Hi!");
+  assert.equal(c.messages[4].content, llm.AGAIN);
+  const g = llm.withEarlier(llm.buildBody(cfg, gemini, gemini.models[0].id, tone("daily"), "hi"), "gemini", ["Hi!"]);
+  assert.deepEqual(g.contents.map((m) => m.role), ["user", "model", "user"]);
+  // Same text as Android.
+  assert.ok(read("android/src/main/java/app/tonefixer/Llm.kt").includes(llm.AGAIN.slice(0, 60)));
+});
+
 test("text goes inside the markers literally ($ patterns stay as typed)", () => {
   const b = llm.buildBody(cfg, gemini, gemini.models[0].id, tone("daily"), "pay $& now $1");
   assert.equal(b.contents[0].parts[0].text, "<text>\npay $& now $1\n</text>");
