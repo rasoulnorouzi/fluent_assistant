@@ -55,8 +55,9 @@ Tone Fixer → About & updates → **Uninstall Tone Fixer** (or long-press its i
 
 ## Web app (iPhone, any browser)
 
-<https://rasoulnorouzi.github.io/fluent_assistant/>: paste text → tap a tone or «روان / رسمی» (Persian)
-→ the result streams in → **Copy**. Safari → Share → **Add to Home Screen** makes it an app icon.
+<https://rasoulnorouzi.github.io/fluent_assistant/>: paste text → tap a tone → the result streams in → **Copy**.
+Install it: Android Chrome → **Install the app** button (or ⋮ → Install app); iPhone Safari → Share → **Add to Home Screen**.
+API key and model: ⚙︎ (separate page).
 Key and settings stay in that browser only. Source: `docs/` (run `docs/sync.sh` after changing
 `extension/llm.js` or `shared/*.json`; a test fails if you forget).
 

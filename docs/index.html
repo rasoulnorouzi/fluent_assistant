@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tone Fixer</title>
-<meta name="description" content="Fix grammar and tone, or translate to Persian, with your own Claude or Gemini key.">
+<meta name="description" content="Fix grammar and tone with your own Claude or Gemini key.">
 <meta name="theme-color" content="#F3F0E8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1F2320" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -50,14 +50,11 @@
   .chip { min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); }
   .chip:hover { border-color: var(--primary); }
   .chip.sel { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 700; }
-  .chip.fa { font-family: system-ui, "Vazirmatn", "Noto Naskh Arabic", sans-serif; }
   .card { background: var(--card); border-radius: 22px; padding: 14px 16px 16px; box-shadow: 0 6px 24px rgba(0,0,0,.08); display: grid; gap: 8px; }
   .card-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
   .card-title { font-weight: 700; color: var(--primary); }
-  .tag { font-size: 12px; color: var(--muted); background: var(--bg); border-radius: 10px; padding: 2px 8px; }
   .model { font-size: 12px; color: var(--muted); margin-inline-start: auto; }
   .result { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 17px; min-height: 26px; }
-  .result.rtl { direction: rtl; text-align: right; font-size: 18px; line-height: 1.75; }
   .caret { color: var(--clay); }
   .status { font-size: 14px; color: var(--muted); }
   .status.err { color: var(--warn); }
@@ -65,6 +62,8 @@
   .btn { flex: 1; min-height: 48px; border-radius: 14px; background: var(--primary); color: var(--on-primary); font-weight: 700; }
   .btn:disabled { opacity: .4; cursor: default; }
   .btn.ghost { flex: 0 0 auto; padding: 0 16px; background: var(--bg); color: var(--ink); font-weight: 500; }
+  .install { justify-self: center; padding: 10px 18px; border-radius: 14px; border: 1px solid var(--line); color: var(--primary); font-weight: 600; }
+  .install-hint { margin: 0; text-align: center; font-size: 14px; color: var(--muted); }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -88,19 +87,20 @@
 
   <div class="label">Rewrite</div>
   <div class="chips" id="tones"></div>
-  <div class="label">ترجمه به فارسی</div>
-  <div class="chips" id="translate"></div>
 
   <section class="card" id="card" hidden aria-live="polite">
-    <div class="card-top"><span class="card-title" id="cardTitle"></span><span class="tag" id="cardTag" hidden></span><span class="model" id="cardModel"></span></div>
+    <div class="card-top"><span class="card-title" id="cardTitle"></span><span class="model" id="cardModel"></span></div>
     <div class="result" id="result" dir="auto"></div>
     <div class="status" id="status" hidden></div>
     <button class="big" id="copy" disabled>Copy</button>
   </section>
+
+  <button class="install" id="install" hidden>Install the app</button>
+  <p class="install-hint" id="iosHint" hidden>To install: tap Share <b>⎋</b> → <b>Add to Home Screen</b>.</p>
 </main>
 
 <script type="module">
-import { buildBody, stream, cleanKey, modelList, currentModel, languageLine } from "./llm.js";
+import { buildBody, stream, cleanKey, modelList, currentModel } from "./llm.js";
 
 const $ = (id) => document.getElementById(id);
 const [tonesCfg, providersCfg] = await Promise.all(["tones.json", "providers.json"].map((f) => fetch(f).then((r) => r.json())));
@@ -126,46 +126,37 @@ function el(tag, attrs = {}, text) {
 
 
 // ---------- chips: tap = run right away ----------
-let active = null; // {kind: "tone"|"tr", id}
+let active = null; // tone id of the last run
 function renderChips() {
   $("tones").replaceChildren(...tonesCfg.tones.map((t) =>
-    el("button", { class: `chip${active?.kind === "tone" && active.id === t.id ? " sel" : ""}`, onclick: () => run("tone", t.id) }, t.label)));
-  $("translate").replaceChildren(...tonesCfg.translate.modes.map((m) =>
-    el("button", { class: `chip fa${active?.kind === "tr" && active.id === m.id ? " sel" : ""}`, onclick: () => run("tr", m.id) }, m.label)));
+    el("button", { class: `chip${active === t.id ? " sel" : ""}`, onclick: () => run(t.id) }, t.label)));
 }
 
 // ---------- run ----------
 let abort = null, result = "";
-async function run(kind, id) {
+async function run(id) {
   const text = $("input").value;
   if (!text.trim()) { $("input").focus(); return; }
   const p = providers[pid()], model = currentModel(p, pid(), s), key = cleanKey(s.keys[pid()]);
-  const translate = kind === "tr";
-  const tone = translate ? tonesCfg.translate.modes.find((m) => m.id === id) : tonesCfg.tones.find((t) => t.id === id);
-  active = { kind, id }; renderChips();
-  if (!translate) { s.tone = id; save(); }
+  const tone = tonesCfg.tones.find((t) => t.id === id);
+  active = id; renderChips();
+  s.tone = id; save();
 
   abort?.abort(); abort = new AbortController(); const mine = abort;
   result = "";
   $("card").hidden = false;
-  $("cardTitle").textContent = translate ? "ترجمه به فارسی" : tone.label;
-  $("cardTag").hidden = true;
+  $("cardTitle").textContent = tone.label;
   $("cardModel").textContent = label(p, model);
-  $("result").className = translate ? "result rtl" : "result";
   setStatus("");
   $("copy").disabled = true;
   render(true);
   if (!key) { setStatus(`Add your ${p.label.split(" ").pop()} API key in Settings (⚙︎).`, true); render(false); return; }
 
-  const lang = translate ? languageLine() : null;
-  const show = (piece) => { result += piece; render(true); };
-  const out = await stream(p, model, key, buildBody(cfg, p, model, tone, text, translate), mine.signal, (piece) => {
+  const out = await stream(p, model, key, buildBody(cfg, p, model, tone, text), mine.signal, (piece) => {
     if (abort !== mine) return;
-    const shown = lang ? lang.feed(piece, (l) => { $("cardTag").textContent = l === "فارسی" ? "متن فارسی است" : `از ${l}`; $("cardTag").hidden = false; }) : piece;
-    if (shown) show(shown);
+    result += piece; render(true);
   });
   if (abort !== mine || out.stop === "cancelled") return;
-  if (lang) { const rest = lang.flush(); if (rest) result += rest; }
   render(false);
   if (out.error) setStatus(out.error, true);
   else if (!result.trim()) setStatus("No answer from the model. Try again.", true);
@@ -189,6 +180,14 @@ $("paste").addEventListener("click", async () => {
   try { $("input").value = await navigator.clipboard.readText(); } catch { $("input").focus(); }
 });
 $("clear").addEventListener("click", () => { $("input").value = ""; $("card").hidden = true; abort?.abort(); $("input").focus(); });
+
+// ---------- install (home-screen app) ----------
+navigator.serviceWorker?.register("sw.js").catch(() => {});
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+let installEvent = null;
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e; $("install").hidden = false; });
+$("install").addEventListener("click", async () => { installEvent?.prompt(); await installEvent?.userChoice; installEvent = null; $("install").hidden = true; });
+if (!standalone && /iPhone|iPad/.test(navigator.userAgent)) $("iosHint").hidden = false;
 
 renderChips();
 $("noKey").hidden = !!s.keys[pid()];
