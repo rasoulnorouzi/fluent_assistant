@@ -73,8 +73,8 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
 
     // ---------- bubble ----------
 
-    private val size = dp(40)          // the circle
-    private val win = dp(47)           // its window: room for the badge to stick out
+    private val size = dp(28)          // the circle
+    private val win = dp(33)           // its window: room for the badge to stick out
     private val margin = dp(6)         // gap to the screen edge
 
     /** Idle = a ghost: faint fill and wave, but a clear ring so it's findable on any background. */
@@ -83,17 +83,17 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
     private val circle = View(ctx)
     private val wave = ImageView(ctx).apply {
         setImageResource(R.drawable.ic_wave); scaleType = ImageView.ScaleType.FIT_CENTER
-        setPadding(dp(9), dp(9), dp(9), dp(9))
+        setPadding(dp(6), dp(6), dp(6), dp(6))
     }
     private val badge = TextView(ctx).apply {
         elevation = dp(4).toFloat()
-        textSize = 8.5f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+        textSize = 6.5f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
         setTextColor(p.cream); background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(p.clayDeep) }
     }
     private val bubble = FrameLayout(ctx).apply {
         addView(circle, FrameLayout.LayoutParams(size, size, Gravity.BOTTOM or Gravity.START))
         addView(wave, FrameLayout.LayoutParams(size, size, Gravity.BOTTOM or Gravity.START))
-        addView(badge, FrameLayout.LayoutParams(dp(15), dp(15), Gravity.TOP or Gravity.END))
+        addView(badge, FrameLayout.LayoutParams(dp(11), dp(11), Gravity.TOP or Gravity.END))
         contentDescription = "Tone Fixer. Tap to rewrite, hold for tones, drag to the X at the bottom to turn off."
     }
     private val bubbleParams = params(win, win).apply {

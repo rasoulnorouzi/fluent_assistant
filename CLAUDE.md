@@ -51,7 +51,7 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-07 Web app simplified: writing only (no translation for now), settings on a separate page (settings.html), installable (sw.js network-first + Install button; iPhone shows "Add to Home Screen" hint).
 - 2026-11-07 Web app «↻ Another» button (or tapping the same tone again): slightly different version. Done with chat turns (earlier answers + "slightly different wording"), not temperature (rejected on Claude 2026-10-21). Web app only for now.
 - 2026-11-07 «↻ Another» on all three (Android card ↻, extension card ↻, web): `Llm.withEarlier` / llm.js `withEarlier` adds the last 3 answers as chat turns + the AGAIN line; a new model or a different text/tone starts fresh. Tapping the current tone chip also gives another version.
-- 2026-11-07 Android bubble: 40 dp (was 48), always on screen except the lock screen (tap with no text box = wiggle), idle = ghost (fill 15% + wave 60% inside a sage ring with a light inner line), solid while touched/working, fades back 0.9 s after release. Replaces the 85% opacity rule.
+- 2026-11-07 Android bubble: 28 dp (user: "30% smaller" than 40; was 48 before), always on screen except the lock screen (tap with no text box = wiggle), idle = ghost (fill 15% + wave 60% inside a sage ring with a light inner line), solid while touched/working, fades back 0.9 s after release. Replaces the 85% opacity rule.
 ## Preferences
 - 2026-11-05 Speed is the top priority (direct API calls, streaming, pre-warm, thinking off, short fixed prompt).
 - 2026-11-05 Wants a hand-made, non-generic look ("no AI slop") for the UI and logo.

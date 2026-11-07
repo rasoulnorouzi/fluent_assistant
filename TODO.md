@@ -86,7 +86,7 @@
 - [x] W.3 Simpler (asked 2026-11-07): main page = text, Paste, Clear, tones, Copy; settings on their own page; Persian translation removed from the web app for now; installable (service worker + Install button / iPhone hint)
 - [x] W.4 «↻ Another» (asked 2026-11-07): same text + same tone again = a slightly different version (earlier answers sent as chat turns, last 3); live check on Haiku: 4 different, close versions
 - [x] W.5 «↻ Another» on Android (card button, or same tone again) and the extension (card button); shared `withEarlier` in Llm.kt / llm.js; published Android update + extension 0.2.5
-- [x] W.6 Android bubble (asked 2026-11-07): 40 dp, always on screen (not on the lock screen), ghost look when idle (faint fill + wave inside a clear ring), solid on touch; published
+- [x] W.6 Android bubble (asked 2026-11-07): 28 dp (then 30% smaller than 40), always on screen (not on the lock screen), ghost look when idle (faint fill + wave inside a clear ring), solid on touch; published
 - [x] W.2 Tests (Node 17 + Chromium at iPhone size), live Claude check (Daily 1.4 s, Persian 1.4 s); merge to main · waiting: you enable Pages once
 
 ## Phase 3: iOS (planned)
