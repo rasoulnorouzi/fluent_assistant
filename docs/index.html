@@ -34,8 +34,14 @@
   button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
   .icon-btn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); }
   .icon-btn:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
-  textarea { width: 100%; min-height: 128px; resize: vertical; font: inherit; color: var(--ink); background: var(--card);
-             border: 1px solid var(--line); border-radius: 18px; padding: 14px 14px 46px; }
+  textarea { width: 100%; min-height: 150px; resize: vertical; font: inherit; font-size: 17px; color: var(--ink); background: var(--card);
+             border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+  .row { display: flex; gap: 10px; }
+  .big { flex: 1; min-height: 54px; border-radius: 16px; background: var(--primary); color: var(--on-primary); font-size: 17px; font-weight: 700; }
+  .big.ghost { background: var(--card); color: var(--ink); border: 1px solid var(--line); font-weight: 600; }
+  .big:disabled { opacity: .4; cursor: default; }
+  a.icon-btn { text-decoration: none; }
+  .notice { display: block; text-align: center; padding: 14px; border-radius: 16px; background: var(--card); color: var(--warn); text-decoration: none; border: 1px solid var(--line); }
   .input-wrap { position: relative; }
   .input-tools { position: absolute; left: 10px; right: 10px; bottom: 8px; display: flex; gap: 6px; justify-content: flex-end; }
   .small { height: 32px; padding: 0 12px; border-radius: 16px; background: var(--bg); color: var(--muted); font-size: 14px; }
@@ -59,16 +65,6 @@
   .btn { flex: 1; min-height: 48px; border-radius: 14px; background: var(--primary); color: var(--on-primary); font-weight: 700; }
   .btn:disabled { opacity: .4; cursor: default; }
   .btn.ghost { flex: 0 0 auto; padding: 0 16px; background: var(--bg); color: var(--ink); font-weight: 500; }
-  details.settings { background: var(--card); border-radius: 18px; padding: 4px 14px; }
-  details.settings summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; list-style: none; }
-  details.settings summary::-webkit-details-marker { display: none; }
-  .field { display: grid; gap: 6px; margin: 6px 0 14px; }
-  .field span { font-size: 14px; font-weight: 600; }
-  input, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px; width: 100%; }
-  .seg { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--line); }
-  .seg button { flex: 1; min-height: 38px; border-radius: 10px; }
-  .seg button.sel { background: var(--primary); color: var(--on-primary); font-weight: 700; }
-  .note { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -77,25 +73,17 @@
   <header>
     <img src="icons/192.png" alt="">
     <h1>Tone Fixer</h1>
-    <button class="icon-btn" id="openSettings" aria-label="Settings" title="Settings">
+    <a class="icon-btn" href="settings.html" aria-label="Settings" title="Settings">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-    </button>
+    </a>
   </header>
 
-  <details class="settings" id="settings">
-    <summary>Settings</summary>
-    <div class="field"><span>Service</span><div class="seg" id="providers"></div></div>
-    <label class="field"><span id="keyLabel">API key</span><input id="key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key"></label>
-    <label class="field"><span>Model</span><select id="model"></select></label>
-    <p class="note">Your key stays in this browser on this phone only. It is sent only to the service you chose.</p>
-  </details>
+  <a class="notice" id="noKey" href="settings.html" hidden>Add your API key first → <b>Settings</b></a>
 
-  <div class="input-wrap">
-    <textarea id="input" placeholder="Type or paste your text (any language)…" dir="auto"></textarea>
-    <div class="input-tools">
-      <button class="small" id="clear">Clear</button>
-      <button class="small" id="paste">Paste</button>
-    </div>
+  <textarea id="input" placeholder="Paste or type your text (any language)…" dir="auto"></textarea>
+  <div class="row">
+    <button class="big ghost" id="paste">Paste</button>
+    <button class="big ghost" id="clear">Clear</button>
   </div>
 
   <div class="label">Rewrite</div>
@@ -107,10 +95,7 @@
     <div class="card-top"><span class="card-title" id="cardTitle"></span><span class="tag" id="cardTag" hidden></span><span class="model" id="cardModel"></span></div>
     <div class="result" id="result" dir="auto"></div>
     <div class="status" id="status" hidden></div>
-    <div class="actions">
-      <button class="btn" id="copy" disabled>Copy</button>
-      <button class="btn ghost" id="useAsInput" disabled title="Put the result back in the box">↑ Edit</button>
-    </div>
+    <button class="big" id="copy" disabled>Copy</button>
   </section>
 </main>
 
@@ -139,18 +124,6 @@ function el(tag, attrs = {}, text) {
   return e;
 }
 
-function renderSettings() {
-  const p = providers[pid()];
-  $("providers").replaceChildren(...Object.entries(providers).map(([id, o]) =>
-    el("button", { class: id === pid() ? "sel" : "", onclick: () => { s.provider = id; save(); renderSettings(); } }, o.label.split(" ").pop())));
-  $("keyLabel").textContent = `${p.label.split(" ").pop()} API key`;
-  if (document.activeElement !== $("key")) $("key").value = s.keys[pid()] || "";
-  const ids = modelList(p, pid(), s), cur = currentModel(p, pid(), s);
-  $("model").replaceChildren(...ids.map((id) => { const o = el("option", { value: id }, label(p, id)); o.selected = id === cur; return o; }));
-}
-$("key").addEventListener("input", (e) => { s.keys = { ...s.keys, [pid()]: cleanKey(e.target.value) }; save(); });
-$("model").addEventListener("change", (e) => { s.models = { ...s.models, [pid()]: e.target.value }; save(); });
-$("openSettings").addEventListener("click", () => { $("settings").open = !$("settings").open; });
 
 // ---------- chips: tap = run right away ----------
 let active = null; // {kind: "tone"|"tr", id}
@@ -180,9 +153,9 @@ async function run(kind, id) {
   $("cardModel").textContent = label(p, model);
   $("result").className = translate ? "result rtl" : "result";
   setStatus("");
-  $("copy").disabled = true; $("useAsInput").disabled = true;
+  $("copy").disabled = true;
   render(true);
-  if (!key) { setStatus(`Add your ${p.label.split(" ").pop()} API key in Settings (⚙︎).`, true); $("settings").open = true; render(false); return; }
+  if (!key) { setStatus(`Add your ${p.label.split(" ").pop()} API key in Settings (⚙︎).`, true); render(false); return; }
 
   const lang = translate ? languageLine() : null;
   const show = (piece) => { result += piece; render(true); };
@@ -198,7 +171,7 @@ async function run(kind, id) {
   else if (!result.trim()) setStatus("No answer from the model. Try again.", true);
   else {
     if (out.stop === "cut") setStatus("Cut off: the answer hit the length limit.");
-    $("copy").disabled = false; $("useAsInput").disabled = false;
+    $("copy").disabled = false;
   }
 }
 
@@ -209,17 +182,16 @@ function render(streaming) {
 function setStatus(msg, err = false) { $("status").hidden = !msg; $("status").textContent = msg; $("status").className = `status${err ? " err" : ""}`; }
 
 $("copy").addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText(result.trim()); setStatus("Copied ✓ Paste it where you were typing."); }
+  try { await navigator.clipboard.writeText(result.trim()); $("copy").textContent = "Copied ✓"; setTimeout(() => { $("copy").textContent = "Copy"; }, 1800); }
   catch { setStatus("Couldn't copy: select the text above and copy it.", true); }
 });
-$("useAsInput").addEventListener("click", () => { $("input").value = result.trim(); $("input").focus(); });
 $("paste").addEventListener("click", async () => {
   try { $("input").value = await navigator.clipboard.readText(); } catch { $("input").focus(); }
 });
-$("clear").addEventListener("click", () => { $("input").value = ""; $("input").focus(); });
+$("clear").addEventListener("click", () => { $("input").value = ""; $("card").hidden = true; abort?.abort(); $("input").focus(); });
 
-renderSettings(); renderChips();
-if (!s.keys[pid()]) $("settings").open = true;
+renderChips();
+$("noKey").hidden = !!s.keys[pid()];
 </script>
 </body>
 </html>

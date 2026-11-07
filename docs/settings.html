@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tone Fixer Settings</title>
+<meta name="theme-color" content="#F3F0E8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1F2320" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icons/192.png">
+<link rel="apple-touch-icon" href="icons/180.png">
+<style>
+  :root { --bg:#F3F0E8; --card:#FBF8F1; --ink:#2B2A26; --muted:#6B675E; --line:#D8D1C2; --primary:#4F6B55;
+          --on-primary:#FBF8F1; --warn:#A35A3A; --clay:#C47A5A; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1F2320; --card:#2A302B; --ink:#ECE7DA; --muted:#A9A397; --line:#414942; --primary:#9BBBA2;
+            --on-primary:#1F2320; --warn:#E7A285; --clay:#D98E6E; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 620px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left)); display: grid; gap: 16px; }
+  header { display: flex; align-items: center; gap: 8px; }
+  header a { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; color: var(--ink); text-decoration: none; font-size: 24px; }
+  h1 { margin: 0; font-size: 22px; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+  .card { background: var(--card); border-radius: 20px; padding: 16px; display: grid; gap: 14px; }
+  .field { display: grid; gap: 6px; }
+  .field > span { font-size: 14px; font-weight: 600; }
+  input, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-height: 48px; width: 100%; }
+  .seg { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--line); }
+  .seg button { flex: 1; min-height: 42px; border-radius: 10px; }
+  .seg button.sel { background: var(--primary); color: var(--on-primary); font-weight: 700; }
+  .big { min-height: 54px; border-radius: 16px; background: var(--primary); color: var(--on-primary); font-size: 17px; font-weight: 700; width: 100%; }
+  .big:disabled { opacity: .5; }
+  .status { font-size: 15px; min-height: 22px; }
+  .status.ok { color: var(--primary); } .status.err { color: var(--warn); }
+  .note { font-size: 13px; color: var(--muted); margin: 0; }
+  .note a { color: var(--primary); }
+</style>
+</head>
+<body>
+<main>
+  <header><a href="./" aria-label="Back">‹</a><h1>Settings</h1></header>
+
+  <div class="card">
+    <div class="field"><span>Service</span><div class="seg" id="providers"></div></div>
+    <label class="field"><span id="keyLabel">API key</span>
+      <input id="key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key"></label>
+    <button class="big" id="save">Save</button>
+    <div class="status" id="status"></div>
+    <p class="note"><a id="keyHelp" href="#" target="_blank" rel="noreferrer">Get a key ↗</a> · The key is saved in this browser on this phone only and sent only to the service you chose.</p>
+  </div>
+
+  <div class="card">
+    <label class="field"><span>Model</span><select id="model"></select></label>
+  </div>
+</main>
+
+<script type="module">
+import { buildBody, stream, cleanKey, modelList, currentModel } from "./llm.js";
+
+const $ = (id) => document.getElementById(id);
+const [tones, providersCfg] = await Promise.all(["tones.json", "providers.json"].map((f) => fetch(f).then((r) => r.json())));
+const providers = providersCfg.providers;
+const load = () => { try { return JSON.parse(localStorage.getItem("toneFixer") || "{}"); } catch { return {}; } };
+let s = { provider: "claude", models: {}, keys: {}, ...load() };
+const save = () => { try { localStorage.setItem("toneFixer", JSON.stringify(s)); return true; } catch { return false; } };
+const pid = () => (providers[s.provider] ? s.provider : "claude");
+
+function el(tag, attrs, text) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) k.startsWith("on") ? e.addEventListener(k.slice(2), v) : e.setAttribute(k, v);
+  e.textContent = text; return e;
+}
+function setStatus(msg, kind) { $("status").textContent = msg; $("status").className = `status ${kind || ""}`; }
+
+function render() {
+  const p = providers[pid()];
+  $("providers").replaceChildren(...Object.entries(providers).map(([id, o]) =>
+    el("button", { class: id === pid() ? "sel" : "", onclick: () => { s.provider = id; save(); setStatus(""); render(); } }, o.label.split(" ").pop())));
+  $("keyLabel").textContent = `${p.label.split(" ").pop()} API key`;
+  $("key").value = s.keys[pid()] || "";
+  $("keyHelp").href = p.keyHelp;
+  const ids = modelList(p, pid(), s), cur = currentModel(p, pid(), s);
+  $("model").replaceChildren(...ids.map((id) => {
+    const o = el("option", { value: id }, p.models.find((m) => m.id === id)?.label || id); o.selected = id === cur; return o;
+  }));
+  if (s.keys[pid()]) setStatus("Key saved ✓", "ok");
+}
+
+$("model").addEventListener("change", (e) => { s.models = { ...s.models, [pid()]: e.target.value }; save(); setStatus("Model saved ✓", "ok"); });
+
+// Save = store the key, then a tiny real request to check it works.
+$("save").addEventListener("click", async () => {
+  const key = cleanKey($("key").value);
+  s.keys = { ...s.keys, [pid()]: key };
+  if (!save()) return setStatus("Couldn't save: this browser blocks storage (private mode?).", "err");
+  if (!key) return setStatus("Key removed.", "");
+  $("save").disabled = true; setStatus("Saved. Checking the key…", "");
+  const p = providers[pid()], model = currentModel(p, pid(), s);
+  const body = buildBody({ tones, providers: providersCfg }, p, model, tones.tones.find((t) => t.id === "grammar"), "helo");
+  const out = await stream(p, model, key, body, new AbortController().signal, () => {});
+  $("save").disabled = false;
+  if (out.error) setStatus(`Saved, but: ${out.error}`, "err");
+  else setStatus("Saved ✓ The key works.", "ok");
+});
+
+render();
+</script>
+</body>
+</html>
