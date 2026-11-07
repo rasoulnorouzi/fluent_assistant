@@ -81,6 +81,20 @@ class LlmTest {
         assertFalse(b.has("temperature"))
     }
 
+    @Test fun anotherVersionAddsEarlierAnswers() {
+        val c = Llm.withEarlier(Llm.buildBody(cfg, claude, claude.models.first().id, cfg.tone("daily"), "hi"), "claude", listOf("Hi!", "Hey!"))
+        val msgs = c.getJSONArray("messages")
+        assertEquals(5, msgs.length())
+        assertEquals("assistant", msgs.getJSONObject(1).getString("role")); assertEquals("Hi!", msgs.getJSONObject(1).getString("content"))
+        assertEquals(Llm.AGAIN, msgs.getJSONObject(4).getString("content"))
+        val g = Llm.withEarlier(Llm.buildBody(cfg, gemini, gemini.models.first().id, cfg.tone("daily"), "hi"), "gemini", listOf("Hi!"))
+        val cs = g.getJSONArray("contents")
+        assertEquals(3, cs.length())
+        assertEquals("model", cs.getJSONObject(1).getString("role"))
+        assertEquals("user", cs.getJSONObject(2).getString("role"))
+        assertEquals(1, Llm.withEarlier(Llm.buildBody(cfg, claude, claude.models.first().id, cfg.tone("daily"), "hi"), "claude", emptyList()).getJSONArray("messages").length())
+    }
+
     @Test fun customModelGetsNoExtra() {
         val b = Llm.buildBody(cfg, gemini, "gemini-9-ultra", cfg.tone("daily"), "x")
         assertFalse(b.getJSONObject("generationConfig").has("thinkingConfig"))

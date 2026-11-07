@@ -149,6 +149,21 @@ function mockServer() {
     assert.equal(await page.inputValue("#ta"), "first part. Hi! second part.");
   });
 
+  await check("↻ Another → earlier answer is sent as a chat turn", async () => {
+    await page.fill("#ta", "see you tomorow");
+    await page.click("#ta");
+    await bubble.click();
+    await ui.locator(".ok:not([disabled])").waitFor();
+    assert.equal(lastBody.contents.length, 1, "first run: no earlier answers");
+    await ui.locator(".again").click();
+    await ui.locator(".ok:not([disabled])").waitFor();
+    assert.equal(lastBody.contents.length, 3);
+    assert.equal(lastBody.contents[1].role, "model");
+    assert.equal(lastBody.contents[1].parts[0].text, "Hi! see you tomorow");
+    await ui.locator(".x").click();
+    await card.waitFor({ state: "hidden" });
+  });
+
   await check("right-click → tone menu → Email", async () => {
     await page.fill("#ta", "pls send me the file");
     await page.click("#ta");
@@ -301,7 +316,7 @@ function mockServer() {
     await page.click("#ta");
     await page.waitForTimeout(300); // state reloads after the key change
     await bubble.click({ button: "right" });
-    assert.deepEqual(await ui.locator(".model-row .two span").allTextContents(), ["Gemini 3.5 Flash-Lite", "Gemini 3.1 Flash-Lite", "Claude Haiku 5.5"]);
+    assert.deepEqual(await ui.locator(".model-row .two span").allTextContents(), ["Gemini 3.5 Flash-Lite", "Gemini 3.1 Flash-Lite", "Claude Haiku 5.5", "Claude Sonnet 5.5"]);
     await shot("ext-menu-models");
     await ui.locator(".model-row", { hasText: "Claude Haiku 5.5" }).click();
     await page.waitForTimeout(200);
@@ -310,6 +325,9 @@ function mockServer() {
     assert.equal(await ui.locator(".body").textContent(), "Claude: see you at 5");
     assert.match(await ui.locator(".card .model").textContent(), /^Claude Haiku 5\.5\s+⇄$/);
     await shot("ext-card-claude");
+    await ui.locator(".card .model").click(); // next: Claude Sonnet 5.5
+    await ui.locator(".card .model", { hasText: "Sonnet" }).waitFor();
+    await ui.locator(".ok:not([disabled])").waitFor();
     await ui.locator(".card .model").click(); // next: back to the first Gemini model
     await ui.locator(".body", { hasText: "Hi! see you at 5" }).waitFor();
     assert.match(await ui.locator(".card .model").textContent(), /^Gemini 3\.5 Flash-Lite/);

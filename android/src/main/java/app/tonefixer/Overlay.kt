@@ -49,6 +49,8 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         fun onTranslate(screen: Boolean)
         /** A translate mode chip (روان / رسمی) was tapped in the Persian card. */
         fun onPickTranslateMode(id: String)
+        /** ↻ in the card: a slightly different version of the same rewrite. */
+        fun onAnother()
     }
 
     /** One model the user can switch to: only services with a saved key are offered. */
@@ -402,6 +404,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
     private lateinit var chips: LinearLayout
     private lateinit var apply: ImageButton
     private lateinit var copy: ImageButton
+    private lateinit var again: ImageButton
     private lateinit var originalToggle: TextView
     private lateinit var originalText: TextView
     private lateinit var col: LinearLayout
@@ -470,6 +473,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         body.setLineSpacing(0f, if (on) 1.15f else 1.3f) // Persian letters are taller
         modelLine.textDirection = if (on) View.TEXT_DIRECTION_RTL else View.TEXT_DIRECTION_FIRST_STRONG
         copy.visibility = if (on) View.VISIBLE else View.GONE
+        again.visibility = if (on) View.GONE else View.VISIBLE
         originalText.text = original ?: ""
         originalText.visibility = View.GONE
         originalToggle.text = "متن اصلی ▾"
@@ -531,6 +535,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
     }
 
     private fun setApplyEnabled(on: Boolean) {
+        again.isEnabled = on; again.alpha = if (on) 1f else 0.35f
         apply.visibility = if (persian && !canApply) View.GONE else View.VISIBLE
         apply.isEnabled = on; apply.alpha = if (on) 1f else 0.35f
     }
@@ -546,7 +551,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         chips.removeAllViews()
         // Current tone first, then the rest in their usual order.
         tones.sortedBy { if (it.id == currentId) 0 else 1 }.forEach { t ->
-            chips.addView(Ui.chip(ctx, p, t.label, t.id == currentId) { if (t.id != currentId) cb.onPickTone(t.id) },
+            chips.addView(Ui.chip(ctx, p, t.label, t.id == currentId) { if (!streaming) cb.onPickTone(t.id) },
                 LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(6) })
         }
     }
@@ -589,6 +594,12 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             contentDescription = "Copy"
             visibility = View.GONE
             setOnClickListener { copyResult() }
+        }
+        again = ImageButton(ctx).apply {
+            setImageResource(R.drawable.ic_again); setColorFilter(p.primary)
+            background = Ui.ripple(Ui.round(p.bg, dp(26).toFloat()), 0x28000000)
+            contentDescription = "Another version"
+            setOnClickListener { if (!streaming) cb.onAnother() }
         }
         originalText = TextView(ctx).apply {
             textSize = 14f; setTextColor(p.muted); setLineSpacing(0f, 1.25f); visibility = View.GONE
@@ -638,6 +649,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                     isHorizontalScrollBarEnabled = false
                     addView(chips)
                 }, LinearLayout.LayoutParams(0, -2, 1f))
+                addView(again, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginStart = dp(8) })
                 addView(copy, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginStart = dp(8) })
                 addView(apply, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginStart = dp(8) })
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
