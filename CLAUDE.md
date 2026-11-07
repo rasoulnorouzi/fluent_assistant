@@ -53,6 +53,7 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-05 Wants step-by-step visibility: always say which TODO step we're on.
 - 2026-11-06 Preference: the idle bubble must be "a bit faded like a ghost button but visible" → idle opacity 85% (was 60% Android / 72% extension), full on touch/hover/working; Android bubble has a 3 dp elevation shadow.
 
+- 2026-11-07 User: keep answers short and to the point; no long replies.
 ## Problems & fixes
 - 2026-11-05 Cloud session can't reach ai.google.dev directly (network policy); Gemini facts were taken from web search results of Google's docs instead.
 - 2026-11-06 `gemini-2.5-flash-lite` returns 404 "no longer available to new users". Fix: removed from providers.json.
@@ -91,6 +92,7 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 Shortcut request (non-streaming, same body as the apps, no browser header) tested live on claude-haiku-5-5: 0.7–0.8 s, Daily rewrite, Farsi → English, injection rewritten, Persian meaning OK. User pasted a Claude key in chat for this test; kept only in the session scratchpad; user should rotate it.
 - 2026-11-06 Translation built (Android): prompt in tones.json → translate (first answer line = source language, split off by TextOps.LanguageLine and shown as «از …»); Job = REWRITE/OWN/SCREEN/TEXT in ToneService; screen text = visible non-editable nodes top→bottom (TextOps.screenText, last 3000 chars); TranslateActivity (PROCESS_TEXT + SEND, translucent, hands text to ToneService.instance). Claude Sonnet 5.5 added with thinking {type:"between_tools"} + effort low (thinking "disabled" is a 400 on Sonnet 5.5). Live: Haiku first text ≈ 0.9 s, Sonnet ≈ 0.6 s.
 - 2026-11-06 Translation prompt lesson: Haiku transliterated a Dutch term into a mixed-script word («خود‌risico»). Fix: "use the established Persian term (eigen risico = فرانشیز); never write a foreign word in Persian letters or mix scripts in a word". Dictionary entries: only common meanings (1–3).
+- 2026-11-07 iOS keyboard idea (analysis, not planned yet): small helper keyboard next to Apple's own (no full keyboard; SwiftKey/Gboard have no plugin API). User finds $99/yr silly → free route: SideStore + free Apple ID (7-day re-sign, auto-refresh), unsigned IPA built on a free cloud Mac (GitHub Actions or Codemagic).
 ## Facts learned (API)
 - 2026-11-05 Claude Haiku 5.5 = `claude-haiku-5-5`; thinking is ON by default; `thinking:{type:"disabled"}` is allowed at effort low/medium/high; `temperature/top_p/top_k` are rejected on API version `2026-10-21`. Browser calls need header `anthropic-dangerous-direct-browser-access: true`.
 - 2026-11-06 Live test (gemini-3.5-flash-lite, thinkingLevel minimal): first text in ~0.9–1.5 s from the cloud box without pre-warm; Farsi, Finglish, questions and an "ignore your instructions" message were all rewritten correctly by the fixed prompt.
