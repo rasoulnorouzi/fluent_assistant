@@ -73,28 +73,27 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
 
     // ---------- bubble ----------
 
-    private val size = dp(48)          // the circle
-    private val win = dp(56)           // its window: room for the badge to stick out
+    private val size = dp(40)          // the circle
+    private val win = dp(47)           // its window: room for the badge to stick out
     private val margin = dp(6)         // gap to the screen edge
 
-    /** Idle bubble: a little faded so it doesn't cover text, but always clearly visible. */
-    private val IDLE_ALPHA = 0.85f
+    /** Idle = a ghost: faint fill and wave, but a clear ring so it's findable on any background. */
+    private var idleLook = true
 
-    private val circle = View(ctx).apply { elevation = dp(3).toFloat() } // soft shadow: visible on any background
+    private val circle = View(ctx)
     private val wave = ImageView(ctx).apply {
-        elevation = dp(3).toFloat() // same layer as the circle, so the wave stays on top
         setImageResource(R.drawable.ic_wave); scaleType = ImageView.ScaleType.FIT_CENTER
-        setPadding(dp(11), dp(11), dp(11), dp(11))
+        setPadding(dp(9), dp(9), dp(9), dp(9))
     }
     private val badge = TextView(ctx).apply {
         elevation = dp(4).toFloat()
-        textSize = 10f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+        textSize = 8.5f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
         setTextColor(p.cream); background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(p.clayDeep) }
     }
     private val bubble = FrameLayout(ctx).apply {
         addView(circle, FrameLayout.LayoutParams(size, size, Gravity.BOTTOM or Gravity.START))
         addView(wave, FrameLayout.LayoutParams(size, size, Gravity.BOTTOM or Gravity.START))
-        addView(badge, FrameLayout.LayoutParams(dp(19), dp(19), Gravity.TOP or Gravity.END))
+        addView(badge, FrameLayout.LayoutParams(dp(15), dp(15), Gravity.TOP or Gravity.END))
         contentDescription = "Tone Fixer. Tap to rewrite, hold for tones, drag to the X at the bottom to turn off."
     }
     private val bubbleParams = params(win, win).apply {
@@ -149,10 +148,33 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                 State.ERROR -> setColor(p.clayDeep)
             }
         }
-        bubble.alpha = if (s == State.IDLE && !cardShown) IDLE_ALPHA else 1f
+        if (s == State.IDLE && !cardShown) ghost(true) else ghost(false)
         badge.visibility = if (s == State.WORKING) View.GONE else View.VISIBLE
         if (s == State.WORKING) pulse = ObjectAnimator.ofFloat(wave, View.ALPHA, 1f, 0.35f).apply {
             duration = 550; repeatMode = ValueAnimator.REVERSE; repeatCount = ValueAnimator.INFINITE; start()
+        }
+    }
+
+    /**
+     * [on] = ghost look: a faint sage fill and wave inside a clearer ring (light inner + dark outer
+     * line, so it shows on light and dark screens). Off = the full, solid bubble (touch, working).
+     */
+    private fun ghost(on: Boolean) {
+        idleLook = on
+        if (on) {
+            circle.background = android.graphics.drawable.LayerDrawable(arrayOf(
+                GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x266F8D75); setStroke(dp(1.5f), 0xB34F6B55.toInt()) },
+                GradientDrawable().apply { shape = GradientDrawable.OVAL; setStroke(dp(1), 0x80FFFFFF.toInt()) },
+            )).apply { setLayerInset(1, dp(1.5f), dp(1.5f), dp(1.5f), dp(1.5f)) }
+            wave.setColorFilter(0x994F6B55.toInt())
+            circle.elevation = 0f; wave.elevation = 0f
+            badge.alpha = 0.55f
+        } else {
+            if (circle.background is android.graphics.drawable.LayerDrawable)
+                circle.background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(p.sage) }
+            wave.clearColorFilter()
+            circle.elevation = dp(3).toFloat(); wave.elevation = dp(3).toFloat() // the wave stays above the circle
+            badge.alpha = 1f
         }
     }
 
@@ -222,7 +244,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                 MotionEvent.ACTION_DOWN -> {
                     downX = e.rawX; downY = e.rawY; startX = bubbleParams.x; startY = bubbleParams.y
                     dragging = false; longFired = false
-                    bubble.alpha = 1f
+                    if (idleLook) ghost(false)
                     main.postDelayed(longPress, 450)
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -239,7 +261,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     main.removeCallbacks(longPress)
-                    if (!cardShown) bubble.alpha = IDLE_ALPHA
+                    if (!cardShown && pulse == null) main.postDelayed({ if (!cardShown && pulse == null) ghost(true) }, 900) // fade back slowly
                     when {
                         dragging && armed && e.actionMasked == MotionEvent.ACTION_UP -> { hideTarget(); cb.onDismiss() }
                         dragging -> { hideTarget(); snapToSide(e.rawX) }
