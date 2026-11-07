@@ -1,7 +1,7 @@
 {
-  "versionCode": 21,
-  "versionName": "0.2.21",
-  "apk": "ToneFixer-0.2.21.apk",
-  "sha256": "546899592fae8ce2bfc0bb2050902ff3b70fd83214bcf5d18c02ddcfb26d9d57",
-  "notes": "\u21bb Another: a slightly different version of the same rewrite"
+  "versionCode": 22,
+  "versionName": "0.2.22",
+  "apk": "ToneFixer-0.2.22.apk",
+  "sha256": "f0613ff273d62a2e79e292746b3736698fdcb91d74a00509fc3a1da54c837404",
+  "notes": "Smaller bubble, always on screen, ghost look"
 }
