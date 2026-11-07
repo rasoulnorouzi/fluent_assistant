@@ -48,6 +48,7 @@ several steps silently. Minimum complexity: fewest files and dependencies, no ar
 - 2026-11-06 iPhone (Mehrnaz, iPhone 14): Apple Shortcuts, no app. Two shortcuts: "Tone Fixer" (Daily tone only, user's choice: no tone menu) and "Persian meaning"; started from the Share menu, AssistiveTouch (floating button), Back Tap or Control Center. Guide: ios/SHORTCUT.md. User: Claude Haiku is the priority model.
 - 2026-11-06 Approved: translate any language → fluent Persian (Android first, then Chrome). Entry points: select text → «ترجمه به فارسی» (PROCESS_TEXT) + Share; bubble menu «فارسی» (own text, ✓ replaces) and «ترجمه‌ی صفحه» (reads visible screen text). Modes: روان (default) + رسمی only. Persian digits. Claude is the yardstick (Haiku 5.5 default, Sonnet 5.5 optional). Must ship through the in-app update.
 - 2026-11-07 Web app on GitHub Pages (`docs/`, main branch): one page, paste → tone/«روان»/«رسمی» → stream → copy; Claude default; key in localStorage; copies of llm.js + shared JSON synced by docs/sync.sh (a Node test checks they match). Pages must be enabled once by the user (Settings → Pages → main → /docs).
+- 2026-11-07 Web app simplified: writing only (no translation for now), settings on a separate page (settings.html), installable (sw.js network-first + Install button; iPhone shows "Add to Home Screen" hint).
 ## Preferences
 - 2026-11-05 Speed is the top priority (direct API calls, streaming, pre-warm, thinking off, short fixed prompt).
 - 2026-11-05 Wants a hand-made, non-generic look ("no AI slop") for the UI and logo.

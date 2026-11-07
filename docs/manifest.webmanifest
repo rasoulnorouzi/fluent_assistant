@@ -1,7 +1,8 @@
 {
   "name": "Tone Fixer",
   "short_name": "Tone Fixer",
-  "description": "Fix grammar and tone, or translate to Persian.",
+  "id": "./",
+  "description": "Fix grammar and tone.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -83,6 +83,7 @@
 
 ## Phase 3w: Web app on GitHub Pages (asked 2026-11-07)
 - [x] W.1 `docs/` web app: paste → tone or «فارسی» → streaming result → copy; Claude default; key in the browser only; installable on the home screen
+- [x] W.3 Simpler (asked 2026-11-07): main page = text, Paste, Clear, tones, Copy; settings on their own page; Persian translation removed from the web app for now; installable (service worker + Install button / iPhone hint)
 - [x] W.2 Tests (Node 17 + Chromium at iPhone size), live Claude check (Daily 1.4 s, Persian 1.4 s); merge to main · waiting: you enable Pages once
 
 ## Phase 3: iOS (planned)
