@@ -56,13 +56,13 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (!::overlay.isInitialized) return
         if (!prefs.bubbleOn) { overlay.hideBubble(); return } // dropped on ✕; the app turns it back on
+        // Always on screen (a faint ghost), except on the lock screen; a tap with no text box focused just wiggles.
+        if (getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked == true) { overlay.hideBubble(); return }
+        overlay.showBubble(cfg.tone(prefs.tone).letter)
         val node = runCatching { findFocus(AccessibilityNodeInfo.FOCUS_INPUT) }.getOrNull()
         if (node != null && node.isEditable && !node.isPassword) {
             refreshModels()
-            overlay.showBubble(cfg.tone(prefs.tone).letter)
             Llm.warm(cfg.provider(prefs.provider))
-        } else {
-            overlay.hideBubble()
         }
     }
 

@@ -106,6 +106,8 @@ class ScreenshotTest {
     @Test fun bubbleAndMenu() = overlay().run {
         showBubble("F")
         save(bubbleView(), "bubble")
+        save(bubbleView(), "bubble-on-white", 0xFFFFFFFF.toInt())
+        save(bubbleView(), "bubble-on-dark", 0xFF121212.toInt())
         setState(Overlay.State.WORKING)
         save(bubbleView(), "bubble-working")
     }
@@ -155,7 +157,7 @@ class ScreenshotTest {
     }
 
     /** Lays out a detached view at phone width and saves it. */
-    private fun save(v: View, name: String) {
+    private fun save(v: View, name: String, bg: Int = 0xFFDDDAD2.toInt()) {
         val w = 784
         val lw = v.layoutParams?.width
         val spec = when {
@@ -166,7 +168,7 @@ class ScreenshotTest {
         v.measure(spec, View.MeasureSpec.UNSPECIFIED)
         v.layout(0, 0, v.measuredWidth, v.measuredHeight)
         val bmp = Bitmap.createBitmap(v.measuredWidth, v.measuredHeight, Bitmap.Config.ARGB_8888)
-        Canvas(bmp).apply { drawColor(0xFFDDDAD2.toInt()) ; v.draw(this) }
+        Canvas(bmp).apply { drawColor(bg); v.draw(this) }
         val out = File("build/screens").apply { mkdirs() }
         File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
