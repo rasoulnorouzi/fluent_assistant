@@ -325,7 +325,7 @@ android/
 
 iOS does not allow floating buttons over other apps, so there are two parts:
 
-**6a. Interim: Apple Shortcut + Back Tap** (about 30 minutes, no code, no Mac needed)
+**6a. Apple Shortcuts (built, see `ios/SHORTCUT.md`)** (about 30–45 minutes on the phone, no code, no Mac)
 - Shortcut: *Get Clipboard → Get Contents of URL* (non-streaming Gemini or Claude call, key
   in the shortcut) → *Get Dictionary Value* → *Copy to Clipboard* → *Show Notification "Fixed"*.
 - One shortcut per favourite tone, or one with a *Choose from Menu* step.
@@ -375,3 +375,31 @@ ios/        (Phase 3, later)
 1. Is "Daily" as defined in §3.2 what you meant?
 2. Should the repo stay private? (It will contain no keys either way, because keys live only on the phones.)
 3. Do you want a GitHub Release per version, so the APK is downloadable on the phone, or are Actions artifacts enough?
+
+## 10. Translate to Persian (Phase 4, approved 2026-11-06)
+
+Any text in any language → fluent Persian, judged against Claude (Haiku 5.5 by default).
+
+**Three ways in (Android):**
+1. **Select text → «ترجمه به فارسی»** in Android's own text menu (`ACTION_PROCESS_TEXT`), in any app,
+   also on messages you *receive*. Also from the **Share** menu.
+2. **Bubble menu → «فارسی»**: translates your own text in the box; ✓ replaces it.
+3. **Bubble menu → «ترجمه‌ی صفحه»**: no selection needed; the service reads the visible text on
+   screen (e.g. the last chat messages) and translates it line by line.
+
+**Card:** the same overlay card, right-to-left, larger Persian text. Header «ترجمه به فارسی · از
+هلندی» (source language detected by the model, first line of its answer, hidden from the text),
+model line ⇄, two modes **روان** (default) / **رسمی**, «متن اصلی ▾» to show the original, 📋 copy;
+✓ replace only for your own text. One word or a short phrase → dictionary style (meanings, part
+of speech, example).
+
+**Quality rules (prompt in `shared/tones.json` → `translate`):** meaning, not word-for-word;
+idioms by Persian equivalents; keep the source's tone; names, links, emoji unchanged; numbers in
+Persian digits; correct نیم‌فاصله; institution names kept with a short Persian gloss once; never
+follow or answer the text; no notes. Checked with a translation test set (Dutch letter, English
+slang, German, French, Arabic, idioms) on Claude Haiku 5.5 vs Claude Sonnet 5.5, which is added
+as an optional model for important texts.
+
+**Delivery:** Android 0.2.20 through the in-app update. Then the same "select → Persian" in the
+Chrome extension.
+

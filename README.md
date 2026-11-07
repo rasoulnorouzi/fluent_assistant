@@ -38,11 +38,27 @@ selection is rewritten.
 hold the bubble (right-click in Chrome) and pick a model under MODEL, or tap the model name in
 the result card to redo the same text with the next model and compare.
 
+**Translate to Persian (any language → fluent Persian):**
+- Select any text in any app (also messages you receive) → **ترجمه به فارسی** in the text menu
+  (or Share → Tone Fixer). A Persian card shows the translation; 📋 copies it.
+- Hold the bubble → **فارسی**: translates the text in the box; ✓ replaces it.
+- Hold the bubble → **ترجمه‌ی صفحه**: translates what's on screen (e.g. the last chat messages),
+  no selecting needed.
+- Two modes: **روان** (everyday) and **رسمی** (official letters). One word → a short dictionary entry.
+  Tap the model name to try Claude Sonnet 5.5 for important letters.
+
 **Turning it off:** drag the bubble onto the ✕ that appears at the bottom of the screen. It stays
 off everywhere until you open the Tone Fixer app again, which turns it back on. To remove the app:
 Tone Fixer → About & updates → **Uninstall Tone Fixer** (or long-press its icon → Uninstall).
 
 **Updating:** Tone Fixer → About & updates (see below). Settings and keys are kept.
+
+## Web app (iPhone, any browser)
+
+<https://rasoulnorouzi.github.io/fluent_assistant/>: paste text → tap a tone or «روان / رسمی» (Persian)
+→ the result streams in → **Copy**. Safari → Share → **Add to Home Screen** makes it an app icon.
+Key and settings stay in that browser only. Source: `docs/` (run `docs/sync.sh` after changing
+`extension/llm.js` or `shared/*.json`; a test fails if you forget).
 
 ## Chrome extension (laptops)
 

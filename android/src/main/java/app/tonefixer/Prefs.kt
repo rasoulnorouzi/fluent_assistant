@@ -36,6 +36,11 @@ class Prefs(ctx: Context) {
         get() = sp.getBoolean("bubbleRight", true)
         set(v) = sp.edit().putBoolean("bubbleRight", v).apply()
 
+    /** Last translate mode used (روان / رسمی); null = the default (fluent). */
+    var translateMode: String?
+        get() = sp.getString("translateMode", null)
+        set(v) = sp.edit().putString("translateMode", v).apply()
+
     /** Bubble's vertical position in px from the top, or -1 for "not moved yet". */
     var bubbleY: Int
         get() = sp.getInt("bubbleY", -1)

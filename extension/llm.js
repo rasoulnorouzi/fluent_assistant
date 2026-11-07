@@ -10,9 +10,11 @@ export function maxTokens(cfg, chars) {
 }
 
 /** Request body. A model id that isn't in providers.json (custom) gets no `extra`. */
-export function buildBody(cfg, provider, modelId, tone, text) {
-  const system = cfg.tones.system.replace("{style}", () => tone.style);
-  const max = maxTokens(cfg, text.length);
+export function buildBody(cfg, provider, modelId, tone, text, translate = false) {
+  // translate = use the translate-to-Persian instructions (tone is then a mode: روان / رسمی).
+  // Persian needs about twice the tokens of English, so translations get twice the room.
+  const system = (translate ? cfg.tones.translate.system : cfg.tones.system).replace("{style}", () => tone.style);
+  const max = translate ? Math.min(maxTokens(cfg, text.length) * 2, cfg.providers.maxTokens.cap) : maxTokens(cfg, text.length);
   // The text goes inside markers (tones.json → userTemplate), so the model treats it as text to
   // rewrite, never as a question or an instruction to follow. A function replacement keeps "$&" literal.
   text = cfg.tones.userTemplate ? cfg.tones.userTemplate.replace("{text}", () => text) : text;
@@ -210,4 +212,35 @@ export function isNewerVersion(a, b) {
   const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number);
   for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
   return false;
+}
+
+/**
+ * A translation answer starts with one line naming the source language («هلندی»). feed(piece, onLanguage)
+ * returns the text to show and reports the language once; flush() returns what is still held back.
+ * No line break within 40 characters = no language line. Same as TextOps.LanguageLine on Android.
+ */
+export function languageLine() {
+  let buf = "", done = false, skipBlank = false;
+  const trimStart = (s) => {
+    if (!skipBlank) return s;
+    const t = s.replace(/^[\n\r ]+/, "");
+    if (t) skipBlank = false;
+    return t;
+  };
+  return {
+    feed(piece, onLanguage) {
+      if (done) return trimStart(piece);
+      buf += piece;
+      const nl = buf.indexOf("\n");
+      if (nl < 0) {
+        if (buf.length <= 40) return "";
+        done = true; const out = buf; buf = ""; return out;
+      }
+      done = true; skipBlank = true;
+      onLanguage(buf.slice(0, nl).trim().replace(/^زبان\s*/, "").trim());
+      const rest = buf.slice(nl + 1); buf = "";
+      return trimStart(rest);
+    },
+    flush() { if (done) return ""; done = true; const out = buf; buf = ""; return out; },
+  };
 }

@@ -199,3 +199,19 @@ test("updates: downloaded config is used only when valid and not older; version 
   assert.ok(!llm.isNewerVersion("0.2.0", "0.2.0"));
   assert.ok(!llm.isNewerVersion("0.1.9", "0.2"));
 });
+
+test("translate body and language line (same as Android)", () => {
+  const b = llm.buildBody(cfg, claude, claude.models[0].id, cfg.tones.translate.modes[1], "Hallo", true);
+  assert.ok(b.system.startsWith("You translate text into Persian") && b.system.includes("Formal (رسمی)"));
+  assert.equal(b.max_tokens, 400);
+  const run = (...pieces) => { const l = llm.languageLine(); let lang = null;
+    const shown = pieces.map((p) => l.feed(p, (x) => { lang = x; })).join("") + l.flush(); return [lang, shown]; };
+  assert.deepEqual(run("هل", "ندی\nسلام! ساعت ", "۱۰ میام."), ["هلندی", "سلام! ساعت ۱۰ میام."]);
+  assert.deepEqual(run("زبان هلندی\n", "\n", "متن"), ["هلندی", "متن"]);
+  assert.deepEqual(run("کوتاه"), [null, "کوتاه"]);
+});
+
+test("web app (docs/) has the same request code and tones as the apps: run docs/sync.sh if this fails", () => {
+  for (const [a, b] of [["extension/llm.js", "docs/llm.js"], ["shared/tones.json", "docs/tones.json"], ["shared/providers.json", "docs/providers.json"]])
+    assert.equal(readFileSync(new URL(b, root), "utf8"), readFileSync(new URL(a, root), "utf8"), `${b} is out of date`);
+});

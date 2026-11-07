@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tone Fixer</title>
+<meta name="description" content="Fix grammar and tone, or translate to Persian, with your own Claude or Gemini key.">
+<meta name="theme-color" content="#F3F0E8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1F2320" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tone Fixer">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/192.png">
+<link rel="apple-touch-icon" href="icons/180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,600,100&display=swap&text=Tone%20Fixer">
+<style>
+  /* Tone Fixer "Soft & personal": paper, sage, clay. One column, thumb-friendly. */
+  :root { --bg:#F3F0E8; --card:#FBF8F1; --ink:#2B2A26; --muted:#6B675E; --line:#D8D1C2; --primary:#4F6B55;
+          --on-primary:#FBF8F1; --sage:#6F8D75; --clay:#C47A5A; --warn:#A35A3A; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1F2320; --card:#2A302B; --ink:#ECE7DA; --muted:#A9A397; --line:#414942; --primary:#9BBBA2;
+            --on-primary:#1F2320; --clay:#D98E6E; --warn:#E7A285; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 620px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left)); display: grid; gap: 14px; }
+  header { display: flex; align-items: center; gap: 10px; }
+  header img { width: 36px; height: 36px; border-radius: 10px; }
+  h1 { margin: 0; flex: 1; font: 600 26px/1 "Fraunces", Georgia, serif; font-variation-settings: "SOFT" 100; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+  .icon-btn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); }
+  .icon-btn:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+  textarea { width: 100%; min-height: 128px; resize: vertical; font: inherit; color: var(--ink); background: var(--card);
+             border: 1px solid var(--line); border-radius: 18px; padding: 14px 14px 46px; }
+  .input-wrap { position: relative; }
+  .input-tools { position: absolute; left: 10px; right: 10px; bottom: 8px; display: flex; gap: 6px; justify-content: flex-end; }
+  .small { height: 32px; padding: 0 12px; border-radius: 16px; background: var(--bg); color: var(--muted); font-size: 14px; }
+  .label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 4px 2px -4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); }
+  .chip:hover { border-color: var(--primary); }
+  .chip.sel { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 700; }
+  .chip.fa { font-family: system-ui, "Vazirmatn", "Noto Naskh Arabic", sans-serif; }
+  .card { background: var(--card); border-radius: 22px; padding: 14px 16px 16px; box-shadow: 0 6px 24px rgba(0,0,0,.08); display: grid; gap: 8px; }
+  .card-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .card-title { font-weight: 700; color: var(--primary); }
+  .tag { font-size: 12px; color: var(--muted); background: var(--bg); border-radius: 10px; padding: 2px 8px; }
+  .model { font-size: 12px; color: var(--muted); margin-inline-start: auto; }
+  .result { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 17px; min-height: 26px; }
+  .result.rtl { direction: rtl; text-align: right; font-size: 18px; line-height: 1.75; }
+  .caret { color: var(--clay); }
+  .status { font-size: 14px; color: var(--muted); }
+  .status.err { color: var(--warn); }
+  .actions { display: flex; gap: 8px; }
+  .btn { flex: 1; min-height: 48px; border-radius: 14px; background: var(--primary); color: var(--on-primary); font-weight: 700; }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn.ghost { flex: 0 0 auto; padding: 0 16px; background: var(--bg); color: var(--ink); font-weight: 500; }
+  details.settings { background: var(--card); border-radius: 18px; padding: 4px 14px; }
+  details.settings summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; list-style: none; }
+  details.settings summary::-webkit-details-marker { display: none; }
+  .field { display: grid; gap: 6px; margin: 6px 0 14px; }
+  .field span { font-size: 14px; font-weight: 600; }
+  input, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-height: 44px; width: 100%; }
+  .seg { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--line); }
+  .seg button { flex: 1; min-height: 38px; border-radius: 10px; }
+  .seg button.sel { background: var(--primary); color: var(--on-primary); font-weight: 700; }
+  .note { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icons/192.png" alt="">
+    <h1>Tone Fixer</h1>
+    <button class="icon-btn" id="openSettings" aria-label="Settings" title="Settings">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
+
+  <details class="settings" id="settings">
+    <summary>Settings</summary>
+    <div class="field"><span>Service</span><div class="seg" id="providers"></div></div>
+    <label class="field"><span id="keyLabel">API key</span><input id="key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key"></label>
+    <label class="field"><span>Model</span><select id="model"></select></label>
+    <p class="note">Your key stays in this browser on this phone only. It is sent only to the service you chose.</p>
+  </details>
+
+  <div class="input-wrap">
+    <textarea id="input" placeholder="Type or paste your text (any language)…" dir="auto"></textarea>
+    <div class="input-tools">
+      <button class="small" id="clear">Clear</button>
+      <button class="small" id="paste">Paste</button>
+    </div>
+  </div>
+
+  <div class="label">Rewrite</div>
+  <div class="chips" id="tones"></div>
+  <div class="label">ترجمه به فارسی</div>
+  <div class="chips" id="translate"></div>
+
+  <section class="card" id="card" hidden aria-live="polite">
+    <div class="card-top"><span class="card-title" id="cardTitle"></span><span class="tag" id="cardTag" hidden></span><span class="model" id="cardModel"></span></div>
+    <div class="result" id="result" dir="auto"></div>
+    <div class="status" id="status" hidden></div>
+    <div class="actions">
+      <button class="btn" id="copy" disabled>Copy</button>
+      <button class="btn ghost" id="useAsInput" disabled title="Put the result back in the box">↑ Edit</button>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+import { buildBody, stream, cleanKey, modelList, currentModel, languageLine } from "./llm.js";
+
+const $ = (id) => document.getElementById(id);
+const [tonesCfg, providersCfg] = await Promise.all(["tones.json", "providers.json"].map((f) => fetch(f).then((r) => r.json())));
+const cfg = { tones: tonesCfg, providers: providersCfg };
+const providers = providersCfg.providers;
+
+// Settings live in this browser only (localStorage). Claude first: it's the main service here.
+const store = {
+  get() { try { return JSON.parse(localStorage.getItem("toneFixer") || "{}"); } catch { return {}; } },
+  set(s) { try { localStorage.setItem("toneFixer", JSON.stringify(s)); } catch { /* private mode */ } },
+};
+let s = { provider: "claude", models: {}, keys: {}, tone: tonesCfg.defaultTone, ...store.get() };
+const save = () => store.set(s);
+const pid = () => (providers[s.provider] ? s.provider : "claude");
+const label = (p, id) => p.models.find((m) => m.id === id)?.label || id;
+
+function el(tag, attrs = {}, text) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) k.startsWith("on") ? e.addEventListener(k.slice(2), v) : e.setAttribute(k, v);
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function renderSettings() {
+  const p = providers[pid()];
+  $("providers").replaceChildren(...Object.entries(providers).map(([id, o]) =>
+    el("button", { class: id === pid() ? "sel" : "", onclick: () => { s.provider = id; save(); renderSettings(); } }, o.label.split(" ").pop())));
+  $("keyLabel").textContent = `${p.label.split(" ").pop()} API key`;
+  if (document.activeElement !== $("key")) $("key").value = s.keys[pid()] || "";
+  const ids = modelList(p, pid(), s), cur = currentModel(p, pid(), s);
+  $("model").replaceChildren(...ids.map((id) => { const o = el("option", { value: id }, label(p, id)); o.selected = id === cur; return o; }));
+}
+$("key").addEventListener("input", (e) => { s.keys = { ...s.keys, [pid()]: cleanKey(e.target.value) }; save(); });
+$("model").addEventListener("change", (e) => { s.models = { ...s.models, [pid()]: e.target.value }; save(); });
+$("openSettings").addEventListener("click", () => { $("settings").open = !$("settings").open; });
+
+// ---------- chips: tap = run right away ----------
+let active = null; // {kind: "tone"|"tr", id}
+function renderChips() {
+  $("tones").replaceChildren(...tonesCfg.tones.map((t) =>
+    el("button", { class: `chip${active?.kind === "tone" && active.id === t.id ? " sel" : ""}`, onclick: () => run("tone", t.id) }, t.label)));
+  $("translate").replaceChildren(...tonesCfg.translate.modes.map((m) =>
+    el("button", { class: `chip fa${active?.kind === "tr" && active.id === m.id ? " sel" : ""}`, onclick: () => run("tr", m.id) }, m.label)));
+}
+
+// ---------- run ----------
+let abort = null, result = "";
+async function run(kind, id) {
+  const text = $("input").value;
+  if (!text.trim()) { $("input").focus(); return; }
+  const p = providers[pid()], model = currentModel(p, pid(), s), key = cleanKey(s.keys[pid()]);
+  const translate = kind === "tr";
+  const tone = translate ? tonesCfg.translate.modes.find((m) => m.id === id) : tonesCfg.tones.find((t) => t.id === id);
+  active = { kind, id }; renderChips();
+  if (!translate) { s.tone = id; save(); }
+
+  abort?.abort(); abort = new AbortController(); const mine = abort;
+  result = "";
+  $("card").hidden = false;
+  $("cardTitle").textContent = translate ? "ترجمه به فارسی" : tone.label;
+  $("cardTag").hidden = true;
+  $("cardModel").textContent = label(p, model);
+  $("result").className = translate ? "result rtl" : "result";
+  setStatus("");
+  $("copy").disabled = true; $("useAsInput").disabled = true;
+  render(true);
+  if (!key) { setStatus(`Add your ${p.label.split(" ").pop()} API key in Settings (⚙︎).`, true); $("settings").open = true; render(false); return; }
+
+  const lang = translate ? languageLine() : null;
+  const show = (piece) => { result += piece; render(true); };
+  const out = await stream(p, model, key, buildBody(cfg, p, model, tone, text, translate), mine.signal, (piece) => {
+    if (abort !== mine) return;
+    const shown = lang ? lang.feed(piece, (l) => { $("cardTag").textContent = l === "فارسی" ? "متن فارسی است" : `از ${l}`; $("cardTag").hidden = false; }) : piece;
+    if (shown) show(shown);
+  });
+  if (abort !== mine || out.stop === "cancelled") return;
+  if (lang) { const rest = lang.flush(); if (rest) result += rest; }
+  render(false);
+  if (out.error) setStatus(out.error, true);
+  else if (!result.trim()) setStatus("No answer from the model. Try again.", true);
+  else {
+    if (out.stop === "cut") setStatus("Cut off: the answer hit the length limit.");
+    $("copy").disabled = false; $("useAsInput").disabled = false;
+  }
+}
+
+function render(streaming) {
+  $("result").replaceChildren(result.trim() ? result.trimStart() : "");
+  if (streaming) $("result").append(el("span", { class: "caret" }, "▍"));
+}
+function setStatus(msg, err = false) { $("status").hidden = !msg; $("status").textContent = msg; $("status").className = `status${err ? " err" : ""}`; }
+
+$("copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(result.trim()); setStatus("Copied ✓ Paste it where you were typing."); }
+  catch { setStatus("Couldn't copy: select the text above and copy it.", true); }
+});
+$("useAsInput").addEventListener("click", () => { $("input").value = result.trim(); $("input").focus(); });
+$("paste").addEventListener("click", async () => {
+  try { $("input").value = await navigator.clipboard.readText(); } catch { $("input").focus(); }
+});
+$("clear").addEventListener("click", () => { $("input").value = ""; $("input").focus(); });
+
+renderSettings(); renderChips();
+if (!s.keys[pid()]) $("settings").open = true;
+</script>
+</body>
+</html>
