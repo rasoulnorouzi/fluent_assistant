@@ -164,6 +164,31 @@ function mockServer() {
     await card.waitFor({ state: "hidden" });
   });
 
+  await check("box low on the page: card stays fully on screen, every tone visible", async () => {
+    await page.evaluate(() => {
+      const d = document.createElement("div");
+      d.id = "low"; d.contentEditable = "true";
+      d.style.cssText = "position:fixed;left:40px;right:40px;bottom:10px;height:220px;border:1px solid #999;background:#fff";
+      d.textContent = "hello mr ahmadi\ni will send the report on friday, sorry for late. ".repeat(4);
+      document.body.append(d);
+    });
+    await page.click("#low");
+    await bubble.click();
+    await ui.locator(".ok:not([disabled])").waitFor();
+    const c = await card.boundingBox();
+    assert.ok(c.y >= 0 && c.y + c.height <= 900, `card at ${JSON.stringify(c)}`);
+    const chips = ui.locator(".chip");
+    assert.equal(await chips.count(), 8);
+    for (let i = 0; i < 8; i++) {
+      const b = await chips.nth(i).boundingBox();
+      assert.ok(b.x >= c.x && b.x + b.width <= c.x + c.width + 1 && b.y + b.height <= c.y + c.height, `chip ${i} outside the card`);
+    }
+    await shot("ext-card-low");
+    await ui.locator(".x").click();
+    await card.waitFor({ state: "hidden" });
+    await page.evaluate(() => document.getElementById("low").remove());
+  });
+
   await check("right-click → tone menu → Email", async () => {
     await page.fill("#ta", "pls send me the file");
     await page.click("#ta");
