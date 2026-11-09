@@ -174,6 +174,7 @@
   .row.off .letter { background: transparent; color: var(--muted); }
 
   .card { position: fixed; border-radius: 22px; background: var(--card); padding: 8px 10px 12px 16px;
+          display: flex; flex-direction: column; max-height: calc(100vh - 16px); box-sizing: border-box;
           box-shadow: 0 12px 36px rgba(0,0,0,.22), 0 0 0 1px color-mix(in srgb, var(--line) 50%, transparent); }
   .top { display: flex; align-items: flex-start; gap: 8px; min-height: 36px; }
   .heading { display: flex; flex-direction: column; min-width: 0; padding-top: 6px; }
@@ -186,14 +187,13 @@
   .x { margin-inline-start: auto; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); }
   .x:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
   .body { font-size: 16px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 40vh; overflow: auto;
-          padding: 2px 6px 2px 0; min-height: 24px; user-select: text; }
+          padding: 2px 6px 2px 0; min-height: 24px; flex: 0 1 auto; user-select: text; }
   .caret { color: var(--clay); }
   .status { font-size: 13px; color: var(--muted); margin-top: 6px; padding-inline-end: 6px; }
   .status.err { color: var(--warn); }
   .status a { color: var(--primary); text-decoration: underline; cursor: pointer; margin-inline-start: 6px; }
-  .foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-  .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; padding: 2px;
-           mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); } /* hint: more tones → */
+  .foot { display: flex; align-items: flex-end; gap: 8px; margin-top: 10px; flex: none; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; padding: 2px; } /* every tone in view */
   .chip { flex: none; height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); white-space: nowrap; }
   .chip:hover { border-color: var(--primary); }
   .chip.sel { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 700; cursor: default; }
@@ -343,6 +343,11 @@
     if (cardSide === "below") { c.style.top = `${Math.min(anchor.bottom + 8, vh - 120)}px`; c.style.bottom = ""; }
     else if (cardSide === "above") { c.style.bottom = `${Math.min(vh - anchor.top + 8, vh - 120)}px`; c.style.top = ""; }
     else { c.style.top = "12px"; c.style.bottom = ""; }
+    // Never off screen: a card that would run past the bottom (e.g. an email box low on the page,
+    // or a long answer) moves up until all of it is in view; max-height + a scrolling body do the rest.
+    const r = c.getBoundingClientRect();
+    if (r.bottom > vh - 8) { c.style.top = `${Math.max(8, vh - r.height - 8)}px`; c.style.bottom = ""; }
+    else if (r.top < 8) { c.style.top = "8px"; c.style.bottom = ""; }
   }
   function chooseCardSide() {
     const r = (snap?.el || field).getBoundingClientRect(), vh = window.innerHeight, need = 260;
@@ -515,9 +520,8 @@
     ui.tag.hidden = !fromFarsi;
     ui.status.hidden = true;
     ui.ok.disabled = true; ui.again.disabled = true;
-    ui.chips.replaceChildren(...[...tones].sort((a, b) => (a.id === toneId ? -1 : b.id === toneId ? 1 : 0)).map((x) =>
+    ui.chips.replaceChildren(...tones.map((x) =>
       h("button", { class: `chip${x.id === toneId ? " sel" : ""}`, onclick: () => { if (!streaming) run(x.id, false); } }, x.label)));
-    ui.chips.scrollLeft = 0;
     renderBody();
     setBubble("working");
     if (ui.card.hidden) { ui.card.hidden = false; chooseCardSide(); }
@@ -552,6 +556,7 @@
     if (streaming) b.append(h("span", { class: "caret" }, "▍"));
     b.hidden = !result && !streaming;
     if (atEnd) b.scrollTop = b.scrollHeight; // follow long answers
+    if (!ui.card.hidden) placeCard(); // the card grows while text streams in: keep all of it on screen
   }
 
   function status(msg, err, settingsLink) {
@@ -559,6 +564,7 @@
     ui.status.className = `status${err ? " err" : ""}`;
     ui.status.replaceChildren(msg || "");
     if (settingsLink) ui.status.append(h("a", { onclick: () => send({ type: "options" }) }, "Open settings ↗"));
+    if (!ui.card.hidden) placeCard();
   }
 
   function finish(note) {
