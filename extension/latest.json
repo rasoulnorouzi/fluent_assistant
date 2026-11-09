@@ -1,5 +1,5 @@
 {
-  "version": "0.2.5",
-  "zip": "tone-fixer-extension-0.2.5.zip",
-  "notes": "\u21bb Another: a slightly different version of the same rewrite"
+  "version": "0.2.6",
+  "zip": "tone-fixer-extension-0.2.6.zip",
+  "notes": "Card stays on screen; all tones visible"
 }
