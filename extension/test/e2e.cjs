@@ -21,6 +21,9 @@ const PAGE = `<!doctype html><meta charset="utf-8"><title>Test page</title>
 <div id="rich" contenteditable="true" style="border:1px solid #ccc;min-height:120px;padding:8px">
 <div>hello mr ahmadi</div><div>i will send report friday</div>
 <div class="gmail_signature">-- <br>Rasoul · sent from my laptop</div></div>
+<h3 id="article-title">A short article</h3>
+<p id="p1">The weather is nice today, and <a href="#x">the park</a> is full of people.</p>
+<p id="p2">Please read the <b>new rules</b> before you go.</p>
 <div style="height:600px"></div></body>`;
 
 let lastBody = null;
@@ -47,6 +50,19 @@ function mockServer() {
       return res.end(JSON.stringify({ error: { code: 400, message: "API key not valid.", status: "INVALID_ARGUMENT" } }));
     }
     lastBody = JSON.parse(raw);
+    const sys = lastBody.systemInstruction.parts[0].text;
+    if (sys.includes("JSON array of strings")) { // page translation: one Persian item per piece
+      const pieces = JSON.parse(lastBody.contents[0].parts[0].text.replace(/^<text>\n([\s\S]*)\n<\/text>$/, "$1"));
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      const text = JSON.stringify(pieces.map((p) => (p === "A short article" ? "یک مقاله‌ی کوتاه" : `فارسی ${p}`)));
+      res.write(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text }], role: "model" } }] })}\r\n\r\n`);
+      return res.end(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: "" }], role: "model" }, finishReason: "STOP" }] })}\r\n\r\n`);
+    }
+    if (sys.startsWith("You translate text into Persian")) { // selected text: language line, then Persian
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      res.write(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: "انگلیسی\nسلام دنیا" }], role: "model" } }] })}\r\n\r\n`);
+      return res.end(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: "" }], role: "model" }, finishReason: "STOP" }] })}\r\n\r\n`);
+    }
     const input = lastBody.contents[0].parts[0].text.replace(/^<text>\n([\s\S]*)\n<\/text>$/, "$1");
     const out = `Hi! ${input.trim()}`;
     res.writeHead(200, { "content-type": "text/event-stream" });
@@ -96,7 +112,8 @@ function mockServer() {
   });
   let sw = ctx.serviceWorkers()[0] || (await ctx.waitForEvent("serviceworker"));
   const extId = sw.url().split("/")[2];
-  await sw.evaluate(() => chrome.storage.local.set({ keys: { gemini: "test-key" }, tone: "daily" }));
+  // These tests were written for Gemini and the bubble next to the box (the defaults are now Claude and the corner).
+  await sw.evaluate(() => chrome.storage.local.set({ keys: { gemini: "test-key" }, tone: "daily", provider: "gemini", bubbleSpot: "box" }));
   // The install-time update check stores the downloaded tones; wait for it.
   for (let i = 0; i < 50 && !(await sw.evaluate(() => chrome.storage.local.get("remoteCfg").then((s) => !!s.remoteCfg))); i++) await new Promise((r) => setTimeout(r, 100));
   for (const p of ctx.pages()) if (p.url().includes("options.html")) await p.close(); // opened on install
@@ -187,6 +204,105 @@ function mockServer() {
     await ui.locator(".x").click();
     await card.waitFor({ state: "hidden" });
     await page.evaluate(() => document.getElementById("low").remove());
+  });
+
+  const tabId = () => sw.evaluate((u) => chrome.tabs.query({ url: u }).then((t) => t[0].id), `${base}/page`);
+  const toTab = (msg) => tabId().then((id) => sw.evaluate(([i, m]) => chrome.tabs.sendMessage(i, m, { frameId: 0 }), [id, msg]));
+
+  await check("bubble in the screen corner (new default); switched off = no bubble", async () => {
+    await sw.evaluate(() => chrome.storage.local.set({ bubbleSpot: "corner" }));
+    await page.fill("#ta", "corner test");
+    await page.click("#ta");
+    await bubble.waitFor({ state: "visible" });
+    await page.waitForTimeout(200);
+    const b = await bubble.boundingBox();
+    assert.ok(b.x > 900 - 80 && b.y > 900 - 80, `bubble at ${JSON.stringify(b)}`);
+    await sw.evaluate(() => chrome.storage.local.set({ enabled: false }));
+    await page.waitForTimeout(200);
+    await page.keyboard.type(" more");
+    await page.waitForTimeout(200);
+    assert.equal(await bubble.isVisible(), false, "off = hidden");
+    await sw.evaluate(() => chrome.storage.local.set({ enabled: true, bubbleSpot: "box" }));
+    await page.waitForTimeout(200);
+  });
+
+  await check("right-click translate: selected words turn Persian in place (Vazirmatn, RTL); ✕ restores", async () => {
+    const before = await page.innerHTML("#p1");
+    await page.evaluate(() => { // select "nice today, and the park" (cuts through the first text piece)
+      const p = document.getElementById("p1"), r = document.createRange();
+      r.setStart(p.firstChild, 15); r.setEnd(p.querySelector("a").firstChild, 8);
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    });
+    await toTab({ type: "translateSel", text: "nice today, and the park" });
+    await page.waitForFunction(() => document.getElementById("p1").textContent.includes("فارسی"));
+    const t = await page.textContent("#p1");
+    assert.ok(t.startsWith("The weather is فارسی nice today, and"), t);
+    assert.ok(t.includes("and the park"), t); // the link text came back as the second part of one item
+    assert.ok(lastBody.contents[0].parts[0].text.includes("nice today, and ⟦1⟧the park"), "one item per paragraph, with marks");
+    assert.ok(t.endsWith(" is full of people."), "text outside the selection stays");
+    assert.equal(await page.getAttribute("#p1", "dir"), null, "a few words: the paragraph stays left to right");
+    assert.match(await page.evaluate(() => getComputedStyle(document.getElementById("p1")).fontFamily), /TF Vazirmatn/);
+    assert.equal(await ui.locator(".card").isVisible(), false, "no card for page text");
+    await ui.locator(".pagebar").waitFor();
+    await shot("ext-translate-selection");
+    await ui.locator(".pagebar .pbx").click();
+    assert.equal(await page.textContent("#p1"), "The weather is nice today, and the park is full of people.");
+    assert.equal(await page.getAttribute("#p1", "dir"), null);
+    assert.equal(await page.getAttribute("#p1", "style"), null);
+    assert.ok((await page.innerHTML("#p1")).replace(/\s/g, "") === before.replace(/\s/g, ""), "markup back as it was");
+  });
+
+  await check("right-click translate inside a text box → card with Persian + copy", async () => {
+    await page.fill("#ta", "hello world");
+    await page.click("#ta");
+    await page.evaluate(() => document.getElementById("ta").select());
+    await toTab({ type: "translateSel", text: "hello world" });
+    await ui.locator(".copy:not([disabled])").waitFor();
+    assert.equal(await ui.locator(".card .body").textContent(), "سلام دنیا");
+    assert.equal(await ui.locator(".card .tag").textContent(), "از انگلیسی");
+    assert.equal(await ui.locator(".ok").isVisible(), false);
+    await shot("ext-translate-card");
+    await ui.locator(".x").click();
+    await card.waitFor({ state: "hidden" });
+  });
+
+  await check("translate the whole page (popup / right-click) → original ⇄ Persian → ✕", async () => {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await toTab({ type: "translatePage" });
+    await page.waitForFunction(() => document.getElementById("p2").textContent.includes("فارسی"));
+    assert.equal(await page.textContent("#article-title"), "یک مقاله‌ی کوتاه");
+    assert.equal(await page.getAttribute("#article-title", "dir"), "rtl", "a fully Persian heading is right to left");
+    assert.equal(await page.textContent("#ta"), "", "text boxes are left alone");
+    assert.equal(await page.inputValue("#ta"), "hello world");
+    await page.waitForFunction(() => document.querySelector("tone-fixer-ui").shadowRoot.querySelector(".pagebar .msg:not(:first-child)").textContent === "ترجمه شد");
+    await shot("ext-translate-page");
+    await ui.locator(".pagebar .pb").click(); // متن اصلی
+    assert.equal(await page.textContent("#p2"), "Please read the new rules before you go.");
+    await ui.locator(".pagebar .pb").click(); // back to فارسی
+    assert.ok((await page.textContent("#p2")).includes("فارسی"));
+    assert.equal((await toTab({ type: "pageState" })).on, true);
+    await toTab({ type: "translatePage" }); // second time = off
+    assert.equal(await page.textContent("#p2"), "Please read the new rules before you go.");
+    assert.equal(await page.textContent("#article-title"), "A short article");
+    assert.equal(await page.getAttribute("#article-title", "dir"), null);
+    assert.equal(await ui.locator(".pagebar").isVisible(), false);
+  });
+
+  await check("popup: switches and page button render", async () => {
+    const pp = await ctx.newPage();
+    await pp.setViewportSize({ width: 300, height: 420 });
+    await pp.goto(`chrome-extension://${extId}/popup.html`);
+    await pp.locator("#enabled[aria-checked=true]").waitFor();
+    await pp.screenshot({ path: path.join(SHOTS, "ext-popup.png") });
+    await pp.click("#enabled");
+    assert.equal(await sw.evaluate(() => chrome.storage.local.get("enabled").then((s) => s.enabled)), false);
+    await pp.click("#enabled");
+    assert.equal(await sw.evaluate(() => chrome.storage.local.get("enabled").then((s) => s.enabled)), true);
+    await pp.click("#spot button[data-v=corner]");
+    assert.equal(await sw.evaluate(() => chrome.storage.local.get("bubbleSpot").then((s) => s.bubbleSpot)), "corner");
+    await sw.evaluate(() => chrome.storage.local.set({ bubbleSpot: "box" }));
+    await pp.close();
+    await page.bringToFront();
   });
 
   await check("right-click → tone menu → Email", async () => {
@@ -341,7 +457,7 @@ function mockServer() {
     await page.click("#ta");
     await page.waitForTimeout(300); // state reloads after the key change
     await bubble.click({ button: "right" });
-    assert.deepEqual(await ui.locator(".model-row .two span").allTextContents(), ["Gemini 3.5 Flash-Lite", "Gemini 3.1 Flash-Lite", "Claude Haiku 5.5", "Claude Sonnet 5.5"]);
+    assert.deepEqual(await ui.locator(".model-row .two span").allTextContents(), ["Gemini 3.5 Flash-Lite", "Gemini 3.1 Flash-Lite", "Claude Sonnet 5.5", "Claude Haiku 5.5"]);
     await shot("ext-menu-models");
     await ui.locator(".model-row", { hasText: "Claude Haiku 5.5" }).click();
     await page.waitForTimeout(200);
@@ -350,10 +466,7 @@ function mockServer() {
     assert.equal(await ui.locator(".body").textContent(), "Claude: see you at 5");
     assert.match(await ui.locator(".card .model").textContent(), /^Claude Haiku 5\.5\s+⇄$/);
     await shot("ext-card-claude");
-    await ui.locator(".card .model").click(); // next: Claude Sonnet 5.5
-    await ui.locator(".card .model", { hasText: "Sonnet" }).waitFor();
-    await ui.locator(".ok:not([disabled])").waitFor();
-    await ui.locator(".card .model").click(); // next: back to the first Gemini model
+    await ui.locator(".card .model").click(); // next (Haiku is last): back to the first Gemini model
     await ui.locator(".body", { hasText: "Hi! see you at 5" }).waitFor();
     assert.match(await ui.locator(".card .model").textContent(), /^Gemini 3\.5 Flash-Lite/);
     await ui.locator(".x").click();

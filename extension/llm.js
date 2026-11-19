@@ -33,6 +33,31 @@ export function buildBody(cfg, provider, modelId, tone, text, translate = false)
   return body;
 }
 
+/**
+ * Page translation: a batch of text pieces (JSON array) → Persian, one item per piece.
+ * Uses tones.json → translate.page with the fluent (روان) style.
+ */
+export function buildPageBody(cfg, provider, modelId, pieces) {
+  const t = cfg.tones.translate;
+  const mode = t.modes.find((m) => m.id === t.defaultMode) || t.modes[0];
+  const json = JSON.stringify(pieces);
+  const body = buildBody(cfg, provider, modelId, mode, json, true);
+  const system = t.page.replace("{style}", () => mode.style);
+  if (provider.format === "claude") body.system = system;
+  else body.systemInstruction.parts[0].text = system;
+  return body;
+}
+
+/** The model's answer to buildPageBody → an array of n strings, or null if it doesn't fit. */
+export function parsePageAnswer(text, n) {
+  const a = text.indexOf("["), b = text.lastIndexOf("]");
+  if (a < 0 || b < a) return null;
+  try {
+    const out = JSON.parse(text.slice(a, b + 1));
+    return Array.isArray(out) && out.length === n && out.every((x) => typeof x === "string") ? out : null;
+  } catch { return null; }
+}
+
 export const AGAIN = "Write it once more with slightly different wording: same meaning, tone and length, " +
   "not very different from before. Reply with the rewritten message only.";
 

@@ -66,6 +66,11 @@
   let result = "";
   let streaming = false;
   let ui = null;           // built on first use
+  let mode = "rewrite";    // what the card shows: "rewrite" (✓ replaces) or "translate" (to Persian, copy only)
+  let trModes = [];        // [{id, label}]: روان / رسمی
+  let trMode = "fluent";
+  let trText = "";         // the text being translated
+  let trRange = null;      // where it was selected (the card sits next to it)
 
   function send(msg) {
     try { return chrome.runtime.sendMessage(msg).catch(() => null); }
@@ -73,7 +78,10 @@
   }
   async function loadState() {
     const s = await send({ type: "state" });
-    if (s) { tones = s.tones; tone = s.tone; models = s.models || []; current = s.current || null; ui && setLetter(); }
+    if (s) {
+      tones = s.tones; tone = s.tone; models = s.models || []; current = s.current || null;
+      trModes = s.translateModes || []; trMode = s.translateMode || trMode; ui && setLetter();
+    }
   }
   try {
     chrome.storage.onChanged.addListener((c) => {
@@ -81,6 +89,9 @@
       if (c.provider || c.models || c.keys || c.modelLists) loadState(); // model list or choice changed
       if (c.hiddenSites) { hiddenHere = (c.hiddenSites.newValue || []).includes(SITE); schedule(); }
       if (c.bubblePos) { positions = c.bubblePos.newValue || {}; schedule(); }
+      if (c.enabled) { enabled = c.enabled.newValue !== false; if (!enabled) { cancel(); hideMenu(); } schedule(); }
+      if (c.bubbleSpot) { where = c.bubbleSpot.newValue || "corner"; schedule(); }
+      if (c.cornerPos) { cornerPos = c.cornerPos.newValue || null; schedule(); }
     });
   } catch { /* old script after a reload */ }
 
@@ -92,21 +103,38 @@
     catch { return location.hostname; }
   })();
   let hiddenHere = false;
-  try { chrome.storage.local.get({ hiddenSites: [] }).then((s) => { hiddenHere = s.hiddenSites.includes(SITE); schedule(); }); }
-  catch { /* old script after a reload */ }
+  let enabled = true;            // the switch in the toolbar popup: off = no bubble anywhere
+  let where = "corner";          // bubble: "corner" of the screen (default) or next to the "box"
+  let cornerPos = null;          // corner mode, dragged: {r, b} = distance from the right / bottom edge
+  try {
+    chrome.storage.local.get({ hiddenSites: [], enabled: true, bubbleSpot: "corner", cornerPos: null }).then((s) => {
+      hiddenHere = s.hiddenSites.includes(SITE); enabled = s.enabled !== false; where = s.bubbleSpot; cornerPos = s.cornerPos; schedule();
+    });
+  } catch { /* old script after a reload */ }
 
   // Where the user dragged the bubble, per site: offset from the box's top-right corner.
   let positions = {};
   try { chrome.storage.local.get({ bubblePos: {} }).then((s) => { positions = s.bubblePos; schedule(); }); } catch { /* old script */ }
 
   async function savePosition() {
+    const b = ui.bubble.getBoundingClientRect();
+    if (where === "corner") { // one spot for every site, kept as a distance from the right / bottom edge
+      cornerPos = { r: Math.round(document.documentElement.clientWidth - b.right), b: Math.round(window.innerHeight - b.bottom) };
+      try { await chrome.storage.local.set({ cornerPos }); } catch { /* old script */ }
+      return;
+    }
     if (!field) return;
-    const r = field.getBoundingClientRect(), b = ui.bubble.getBoundingClientRect();
+    const r = field.getBoundingClientRect();
     positions = { ...positions, [SITE]: { dx: Math.round(b.left - r.right), dy: Math.round(b.top - r.top) } };
     try { await chrome.storage.local.set({ bubblePos: positions }); } catch { /* old script */ }
   }
 
   async function resetPosition() {
+    if (where === "corner") {
+      cornerPos = null;
+      try { await chrome.storage.local.set({ cornerPos: null }); } catch { /* old script */ }
+      schedule(); return;
+    }
     const { [SITE]: _gone, ...rest } = positions;
     positions = rest;
     try { await chrome.storage.local.set({ bubblePos: rest }); } catch { /* old script */ }
@@ -202,6 +230,19 @@
   .again { flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--bg); color: var(--primary); display: grid; place-items: center; }
   .again:disabled { opacity: .35; cursor: default; }
   .ok:disabled { opacity: .35; cursor: default; box-shadow: none; }
+  .copy { flex: none; height: 44px; padding: 0 18px; border-radius: 22px; background: var(--primary); color: var(--on-primary); font-weight: 700; }
+  .copy:disabled { opacity: .35; cursor: default; }
+  .card.fa .body { direction: rtl; text-align: right; font-size: 17px; line-height: 1.8; font-family: system-ui, "Vazirmatn", "Noto Naskh Arabic", "Segoe UI", sans-serif; }
+  .card.fa .chips { direction: rtl; }
+
+  .pagebar { position: fixed; top: 10px; left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 4px;
+             padding: 4px 4px 4px 14px; border-radius: 20px; background: var(--card); direction: rtl;
+             box-shadow: 0 6px 20px rgba(0,0,0,.18), 0 0 0 1px color-mix(in srgb, var(--line) 60%, transparent); }
+  .pagebar .msg { font-size: 13px; color: var(--muted); padding: 0 6px; white-space: nowrap; }
+  .pagebar .msg.err { color: var(--warn); }
+  .pagebar .pb { height: 30px; padding: 0 12px; border-radius: 15px; color: var(--primary); font-weight: 600; font-size: 13px; }
+  .pagebar .pb:hover, .pagebar .pbx:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+  .pagebar .pbx { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); }
   [hidden] { display: none !important; }
   `;
 
@@ -261,6 +302,7 @@
     const chips = h("div", { class: "chips" });
     const again = h("button", { class: "again", "aria-label": "Another version", title: "Another version (slightly different)",
       onclick: () => { if (!streaming) run(cardTone || tone, false); } }, icon(AGAIN, 22));
+    const copyBtn = h("button", { class: "copy", hidden: true, onclick: copyResult }, "کپی");
     const ok = h("button", { class: "ok", "aria-label": "Replace", title: "Replace the text (or press Alt+Shift+F again)",
       onclick: apply }, icon(CHECK, 24));
     const card = h("div", { class: "card", hidden: true, role: "dialog", "aria-label": "Tone Fixer", onpointerdown: (e) => {
@@ -270,11 +312,18 @@
         h("div", { class: "heading" }, h("div", { class: "titlerow" }, title, tag), model),
         h("button", { class: "x", "aria-label": "Cancel", title: "Cancel (Esc)", onclick: cancel }, icon(CLOSE, 20))),
       body, status,
-      h("div", { class: "foot" }, chips, again, ok));
+      h("div", { class: "foot" }, chips, again, copyBtn, ok));
 
-    root.append(h("div", { class: "tf" }, bubble, menu, card));
+    // Page translation: a small bar at the top (status · original/Persian · ✕).
+    const pageMsg = h("span", { class: "msg" });
+    const pageSwap = h("button", { class: "pb", onclick: swapPage }, "متن اصلی");
+    const pagebar = h("div", { class: "pagebar", hidden: true, role: "status" },
+      h("span", { class: "msg" }, "فارسی"), pageMsg, pageSwap,
+      h("button", { class: "pbx", "aria-label": "Close translation", title: "Back to the original page", onclick: stopPage }, icon(CLOSE, 16)));
+
+    root.append(h("div", { class: "tf" }, bubble, menu, card, pagebar));
     document.documentElement.append(host);
-    return { host, bubble, badge, menu, card, title, model, tag, body, status, chips, again, ok };
+    return { host, bubble, badge, menu, card, title, model, tag, body, status, chips, again, copyBtn, ok, pagebar, pageMsg, pageSwap };
   }
   const ensureUi = () => (ui && ui.host.isConnected ? ui : (ui = buildUi()));
 
@@ -288,7 +337,7 @@
   const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; place(); }); };
 
   function shouldShow() {
-    return field && field.isConnected && (cardOpen() || (!hiddenHere && currentText(field).trim() !== ""));
+    return field && field.isConnected && (cardOpen() && mode === "rewrite" || (enabled && !hiddenHere && currentText(field).trim() !== ""));
   }
 
   function place() {
@@ -303,7 +352,10 @@
     const fits = ([x, y]) => x >= 2 && y >= 2 && x + S <= vw - 2 && y + S <= vh - 2;
     const saved = positions[SITE];
     let spot;
-    if (saved) { // where the user dragged it, relative to the box's top-right corner
+    if (spotMode() === "corner") { // fixed in the bottom-right corner (or where it was dragged), out of the way
+      const c = cornerPos || { r: 20, b: 20 };
+      spot = [Math.min(Math.max(2, vw - c.r - S), vw - S - 2), Math.min(Math.max(2, vh - c.b - S), vh - S - 2)];
+    } else if (saved) { // where the user dragged it, relative to the box's top-right corner
       spot = [Math.min(Math.max(2, r.right + saved.dx), vw - S - 2), Math.min(Math.max(2, r.top + saved.dy), vh - S - 2)];
     } else {
       // Never on the text: outside the box first (one-line boxes: to the right; others: above the
@@ -322,6 +374,8 @@
     if (cardOpen()) placeCard();
   }
 
+  const spotMode = () => where;
+
   function placeMenu() {
     const br = ui.bubble.getBoundingClientRect();
     const m = ui.menu, vw = document.documentElement.clientWidth, vh = window.innerHeight;
@@ -333,7 +387,7 @@
   let cardSide = "below";
   function placeCard() {
     const c = ui.card, vw = document.documentElement.clientWidth, vh = window.innerHeight;
-    const anchor = (snap?.el || field)?.getBoundingClientRect();
+    const anchor = cardAnchor()?.getBoundingClientRect();
     const w = Math.min(460, vw - 24);
     c.style.width = `${w}px`;
     const left = anchor ? Math.min(Math.max(12, anchor.left), vw - w - 12) : 12;
@@ -349,8 +403,12 @@
     if (r.bottom > vh - 8) { c.style.top = `${Math.max(8, vh - r.height - 8)}px`; c.style.bottom = ""; }
     else if (r.top < 8) { c.style.top = "8px"; c.style.bottom = ""; }
   }
+  /** What the card sits next to: the text box, or the selected text being translated. */
+  const cardAnchor = () => (mode === "translate" ? trRange : snap?.el || field);
   function chooseCardSide() {
-    const r = (snap?.el || field).getBoundingClientRect(), vh = window.innerHeight, need = 260;
+    const a = cardAnchor();
+    if (!a) { cardSide = "top"; return; }
+    const r = a.getBoundingClientRect(), vh = window.innerHeight, need = 260;
     cardSide = vh - r.bottom >= need ? "below" : r.top >= need ? "above" : "top";
   }
 
@@ -411,7 +469,7 @@
       }
     }
     m.append(h("div", { class: "sep" }));
-    if (positions[SITE]) m.append(h("button", { class: "row off", role: "menuitem", onclick: () => { hideMenu(); resetPosition(); } },
+    if (where === "corner" ? cornerPos : positions[SITE]) m.append(h("button", { class: "row off", role: "menuitem", onclick: () => { hideMenu(); resetPosition(); } },
       h("span", { class: "letter" }, icon(WAVE, 14)), h("span", {}, "Move back to default")));
     m.append(
       h("button", { class: "row off", role: "menuitem", title: "Bring it back in Tone Fixer settings", onclick: () => { hideMenu(); hideOnThisSite(); } },
@@ -513,6 +571,10 @@
   const cardOpen = () => !!ui && !ui.card.hidden;
 
   function openCard(toneId, fromFarsi) {
+    mode = "rewrite";
+    ui.card.classList.remove("fa");
+    ui.ok.hidden = false; ui.again.hidden = false; ui.copyBtn.hidden = true;
+    ui.tag.textContent = "from Farsi";
     const t = tones.find((x) => x.id === toneId);
     ui.title.textContent = t ? t.label : "";
     cardTone = toneId;
@@ -540,7 +602,7 @@
     await send({ type: "setModel", provider: x.provider, model: x.model });
     earlier = { key: null, outs: [] }; // a new model starts fresh, so models can be compared
     await loadState();
-    if (rerun) run(cardTone || tone, false);
+    if (rerun) { if (mode === "translate") translateText(trText, null, trMode); else run(cardTone || tone, false); }
   }
 
   function nextModel() {
@@ -573,7 +635,8 @@
     status(note, false);
     ui.ok.disabled = !result.trim();
     ui.again.disabled = false;
-    if (result.trim()) runOuts?.push(result.trim());
+    ui.copyBtn.disabled = !result.trim();
+    if (result.trim() && mode === "rewrite") runOuts?.push(result.trim());
     setBubble("idle");
   }
 
@@ -606,6 +669,7 @@
   }
 
   async function apply() {
+    if (mode !== "rewrite") return;
     const s = snap;
     if (!s || !result.trim() || streaming) return;
     const el = s.el;
@@ -657,11 +721,306 @@
     schedule();
   }
 
+  // ---------- translate selected text to Persian (right-click → «ترجمه به فارسی») ----------
+
+  async function translateText(text, range, modeId) {
+    if (!text.trim()) return;
+    ensureUi();
+    hideMenu(); stopPort();
+    if (!trModes.length || !tones.length) await loadState();
+    mode = "translate"; trText = text;
+    if (range) trRange = range;
+    if (modeId) trMode = modeId;
+    result = ""; streaming = true;
+    ui.card.classList.add("fa");
+    ui.title.textContent = "ترجمه به فارسی";
+    ui.tag.hidden = true;
+    renderModel(current?.label);
+    ui.status.hidden = true;
+    ui.ok.hidden = true; ui.again.hidden = true; ui.copyBtn.hidden = false; ui.copyBtn.disabled = true;
+    ui.copyBtn.textContent = "کپی";
+    ui.chips.replaceChildren(...trModes.map((m) =>
+      h("button", { class: `chip${m.id === trMode ? " sel" : ""}`, onclick: () => { if (!streaming && m.id !== trMode) translateText(trText, null, m.id); } }, m.label)));
+    renderBody();
+    if (ui.card.hidden) { ui.card.hidden = false; chooseCardSide(); }
+    placeCard();
+    let p;
+    try { p = chrome.runtime.connect({ name: "rewrite" }); }
+    catch { fail("Tone Fixer was updated. Reload this page to use it.", false); return; }
+    port = p;
+    p.onMessage.addListener((m) => {
+      if (port !== p) return;
+      if (m.type === "text") { result += m.text; renderBody(); return; }
+      if (m.type === "using") { renderModel(m.label); return; }
+      if (m.type === "lang") { ui.tag.textContent = m.lang === "فارسی" ? "متن فارسی است" : `از ${m.lang}`; ui.tag.hidden = !m.lang; return; }
+      if (m.type !== "end") return;
+      port = null; p.disconnect();
+      if (m.error) fail(m.error, m.settings);
+      else if (!result.trim()) fail("No answer from the model. Try again.", false);
+      else finish(m.stop === "cut" ? "Cut off: the answer hit the length limit." : null);
+    });
+    p.onDisconnect.addListener(() => { if (port === p) { port = null; fail("Lost the connection to Tone Fixer. Try again.", false); } });
+    p.postMessage({ text, translate: trMode });
+  }
+
+  async function copyResult() {
+    if (!result.trim()) return;
+    const okCopy = await copy(result.trim());
+    ui.copyBtn.textContent = okCopy ? "کپی شد ✓" : "کپی نشد";
+    setTimeout(() => { if (ui) ui.copyBtn.textContent = "کپی"; }, 1600);
+  }
+
+  // ---------- translate the whole page to Persian (toolbar popup) ----------
+  // Like a page translator: each text piece is replaced in place, so links and layout stay. Only
+  // what comes into view is sent (plus a margin), in batches; new content (infinite scroll) follows.
+
+  const SKIP = "script,style,noscript,textarea,input,select,option,code,pre,kbd,samp,svg,math,canvas,template,[translate=no],.notranslate,[contenteditable=''],[contenteditable=true]";
+  const page = { on: false, full: false, showing: "fa", nodes: new Map(), blocks: new Map(), queue: [], waiting: new Map(), busy: 0, done: 0, sent: 0, error: "", io: null, mo: null, gen: 0 };
+
+  function piecesIn(root) {
+    const out = [];
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode(n) {
+      const t = n.nodeValue;
+      // Punctuation right after a link or bold text (". " in "… the <a>legal rent</a>.") is sent too: the Persian
+      // verb comes last, so the end of the sentence often has to move into it.
+      const tail = n.previousSibling?.nodeType === 1 && /^\s*[.!?;:,)]+\s*$/.test(t);
+      if (!t || (!tail && (t.trim().length < 2 || !/\p{L}/u.test(t)))) return NodeFilter.FILTER_REJECT;
+      if (looksFarsi(t) && !/[A-Za-z]/.test(t)) return NodeFilter.FILTER_REJECT; // already Persian
+      const el = n.parentElement;
+      if (!el || el.closest(SKIP) || page.nodes.has(n)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    } });
+    for (let n; (n = w.nextNode());) out.push(n);
+    return out;
+  }
+
+  /** Watch pieces: they're queued when their element comes near the screen. */
+  function watch(nodes) {
+    for (const n of nodes) {
+      const el = n.parentElement;
+      if (!page.waiting.has(el)) { page.waiting.set(el, []); page.io.observe(el); }
+      page.waiting.get(el).push(n);
+    }
+  }
+
+  /** Starts translating: [full] = the whole page (as it scrolls into view), else only what is queued (a selection). */
+  function ensurePage(full) {
+    if (window !== window.top && full) return;
+    ensureUi();
+    if (!page.on) {
+      page.on = true; page.full = false; page.showing = "fa"; page.error = ""; page.done = 0; page.sent = 0; page.gen++;
+      faStyle();
+      ui.pagebar.hidden = false;
+    }
+    if (full && !page.full) {
+      page.full = true;
+      page.io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          page.io.unobserve(e.target);
+          page.queue.push(...(page.waiting.get(e.target) || []));
+          page.waiting.delete(e.target);
+        }
+        pump();
+      }, { rootMargin: "800px 0px" });
+      watch(piecesIn(document.body));
+      let added = [], timer = 0;
+      page.mo = new MutationObserver((muts) => {
+        for (const m of muts) for (const n of m.addedNodes) if (n.nodeType === 1) added.push(n);
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          const roots = added; added = [];
+          if (page.on && page.full) for (const r of roots) if (r.isConnected) watch(piecesIn(r));
+        }, 400);
+      });
+      page.mo.observe(document.body, { childList: true, subtree: true });
+    }
+    renderPagebar();
+  }
+
+  /** The text pieces inside a selection; the first and last are cut at the selection's edges. */
+  function selectionPieces(range) {
+    const sc = range.startContainer, so = range.startOffset, ec = range.endContainer, eo = range.endOffset;
+    if (ec.nodeType === 3 && eo > 0 && eo < ec.nodeValue.length) ec.splitText(eo);
+    if (sc.nodeType === 3 && so > 0 && so < sc.nodeValue.length) {
+      const rest = sc.splitText(so);
+      range.setStart(rest, 0);
+      if (ec === sc) range.setEnd(rest, rest.nodeValue.length);
+    }
+    const c = range.commonAncestorContainer;
+    const root = c.nodeType === 3 ? c.parentElement : c;
+    return root ? piecesIn(root).filter((n) => range.intersectsNode(n)) : [];
+  }
+
+  /** Right-click «ترجمه به فارسی»: the selected text itself turns into Persian, in place. */
+  function translateInPlace(range) {
+    const nodes = selectionPieces(range);
+    if (!nodes.length) return false;
+    ensurePage(false);
+    page.queue.push(...nodes);
+    pump();
+    return true;
+  }
+
+  // Persian text: Vazirmatn (only its Persian letters, so Latin names keep the site's font), right to left.
+  let faReady = false;
+  function faStyle() {
+    if (faReady) return;
+    faReady = true;
+    try {
+      fetch(chrome.runtime.getURL("vazirmatn.woff2")).then((r) => r.arrayBuffer())
+        .then((buf) => new FontFace("TF Vazirmatn", buf, { weight: "100 900" }).load())
+        .then((f) => document.fonts.add(f)).catch(() => {});
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(`[data-tf-fa] { font-family: "TF Vazirmatn", var(--tf-font, system-ui), sans-serif !important; }
+        [data-tf-fa][data-tf-left] { text-align: right !important; }`);
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    } catch { /* very old page setup: Persian still shows, in the site's font */ }
+  }
+
+  function pump() {
+    while (page.on && page.busy < 3 && page.queue.length) {
+      const batch = []; let chars = 0;
+      while (page.queue.length && batch.length < 40 && chars < 1800) {
+        const n = page.queue.shift();
+        if (!n.isConnected || page.nodes.has(n)) continue;
+        batch.push(n); chars += n.nodeValue.length;
+      }
+      if (!batch.length) break;
+      page.busy++; page.sent += batch.length;
+      translateBatch(batch, page.gen).finally(() => { page.busy--; renderPagebar(); pump(); });
+    }
+    renderPagebar();
+  }
+
+  /** The nearest block (not inline) element around a text piece: one sentence/paragraph is sent as one item. */
+  function blockOf(el) {
+    for (let e = el, i = 0; e && e !== document.body && i < 6; e = e.parentElement, i++)
+      if (!getComputedStyle(e).display.startsWith("inline")) return e;
+    return el;
+  }
+
+  /**
+   * Pieces of one paragraph go as ONE item, with ⟦1⟧ ⟦2⟧ … where a link or bold part starts or ends
+   * ("than the ⟦1⟧legal rent⟦2⟧."), so the model sees whole sentences and splits its Persian at the same
+   * marks (the verb can move after the last one). [single] = one item per piece (retry without marks).
+   */
+  async function translateBatch(nodes, gen, single = false) {
+    const groups = [];
+    for (const n of nodes) {
+      const b = single ? n : blockOf(n.parentElement), g = groups.at(-1);
+      if (g && g.block === b) g.nodes.push(n); else groups.push({ block: b, nodes: [n] });
+    }
+    const items = groups.map((g) => g.nodes.map((n, i) => (i ? `⟦${i}⟧` : "") + n.nodeValue.replace(/\s+/g, " ")).join("").trim());
+    const r = await send({ type: "translatePieces", pieces: items });
+    if (!page.on || gen !== page.gen) return;
+    if (r?.items) {
+      const again = [];
+      groups.forEach((g, gi) => {
+        const parts = r.items[gi].split(/⟦\d+⟧/);
+        if (parts.length !== g.nodes.length) { again.push(...g.nodes); return; }
+        g.nodes.forEach((n, i) => {
+          if (!n.isConnected) return;
+          const orig = n.nodeValue, tr = parts[i];
+          // The original's outer spaces; a space the model wrote at an edge is kept where the original had none.
+          const lead = orig.match(/^\s*/)[0] || (/^\s/.test(tr) || (i > 0 && /^\p{L}/u.test(tr.trim()) && /^[.!?;:,)]/.test(orig.trim())) ? " " : "");
+          const fa = tr.trim() ? lead + tr.trim() + (orig.match(/\s*$/)[0] || (/\s$/.test(tr) ? " " : "")) : (orig.trim() ? "" : orig);
+          page.nodes.set(n, { orig, fa });
+          if (page.showing === "fa") n.nodeValue = fa;
+          rtl(n.parentElement);
+        });
+        page.done += g.nodes.length;
+      });
+      if (again.length && !single) await translateBatch(again, gen, true); // marks got lost: piece by piece
+      else if (again.length) { page.sent -= again.length; page.error = "Some parts couldn't be translated."; }
+    } else if (r?.retry && nodes.length > 1) { // the answer didn't line up with the items: try in two halves
+      const half = Math.ceil(nodes.length / 2);
+      await translateBatch(nodes.slice(0, half), gen, single);
+      await translateBatch(nodes.slice(half), gen, single);
+    } else {
+      page.sent -= nodes.length;
+      page.error = r?.error || "Some parts couldn't be translated.";
+    }
+  }
+
+  /** Right-to-left + Vazirmatn for the nearest block around a translated piece (undone by ✕ / "متن اصلی"). */
+  function rtl(el) {
+    for (let e = el, i = 0; e && e !== document.body && i < 5; e = e.parentElement, i++) {
+      const cs = getComputedStyle(e);
+      if (cs.display.startsWith("inline")) continue;
+      if (!page.blocks.has(e)) page.blocks.set(e, { dir: e.getAttribute("dir"), left: cs.textAlign === "left", font: cs.fontFamily, rtl: false });
+      // Right to left only once most of the block is Persian (a few translated words keep an English paragraph LTR).
+      const b = page.blocks.get(e);
+      const letters = (e.textContent.match(/\p{L}/gu) || []).length, persian = (e.textContent.match(/[\u0600-\u06FF]/g) || []).length;
+      b.rtl = persian * 2 >= letters;
+      if (page.showing === "fa") styleBlock(e, true);
+      return;
+    }
+  }
+  function styleBlock(e, on) {
+    const b = page.blocks.get(e);
+    if (on) {
+      e.setAttribute("data-tf-fa", "");
+      e.style.setProperty("--tf-font", b.font);
+      if (b.rtl) { e.setAttribute("dir", "rtl"); if (b.left) e.setAttribute("data-tf-left", ""); }
+      else { if (b.dir == null) e.removeAttribute("dir"); else e.setAttribute("dir", b.dir); e.removeAttribute("data-tf-left"); }
+    } else {
+      if (b.dir == null) e.removeAttribute("dir"); else e.setAttribute("dir", b.dir);
+      e.removeAttribute("data-tf-fa"); e.removeAttribute("data-tf-left");
+      e.style.removeProperty("--tf-font");
+      if (!e.getAttribute("style")) e.removeAttribute("style");
+    }
+  }
+
+  function setShowing(which) {
+    page.showing = which;
+    for (const [n, v] of page.nodes) if (n.isConnected) n.nodeValue = which === "fa" ? v.fa : v.orig;
+    for (const e of page.blocks.keys()) styleBlock(e, which === "fa");
+    renderPagebar();
+  }
+  function swapPage() { setShowing(page.showing === "fa" ? "orig" : "fa"); }
+
+  function stopPage() {
+    if (!page.on) return;
+    setShowing("orig");
+    page.on = false; page.full = false; page.gen++;
+    page.io?.disconnect(); page.mo?.disconnect();
+    page.nodes.clear(); page.blocks.clear(); page.queue = []; page.waiting.clear();
+    if (ui) ui.pagebar.hidden = true;
+  }
+
+  const fa = (n) => String(n).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+  function renderPagebar() {
+    if (!ui || !page.on) return;
+    const working = page.busy > 0 || page.queue.length > 0;
+    ui.pageMsg.className = `msg${page.error && !working ? " err" : ""}`;
+    ui.pageMsg.textContent = page.showing !== "fa" ? "متن اصلی" : working ? `در حال ترجمه… ${fa(page.done)}/${fa(page.sent + page.queue.length)}`
+      : page.error ? page.error : page.done ? "ترجمه شد" : "چیزی برای ترجمه نیست";
+    ui.pageSwap.textContent = page.showing === "fa" ? "متن اصلی" : "فارسی";
+  }
+
   // ---------- keyboard shortcut (Alt+Shift+F, sent by the service worker) ----------
 
   try {
-    chrome.runtime.onMessage.addListener((m) => {
-      if (m.type !== "run" || !document.hasFocus()) return;
+    chrome.runtime.onMessage.addListener((m, _sender, reply) => {
+      if (m.type === "translateSel") { // right-click menu; the service worker sends it to the frame with the selection
+        const sel = window.getSelection();
+        const range = sel && sel.rangeCount && !sel.isCollapsed ? sel.getRangeAt(0).cloneRange() : null;
+        const text = (range && sel.toString()) || m.text || "";
+        const ed = editableFrom(deepActive());
+        // Text on the page → translated where it is. Inside a text box (can't be changed in place) → the card.
+        if (range && !(ed && ed.contains(range.commonAncestorContainer)) && translateInPlace(range)) { sel.removeAllRanges(); return; }
+        trRange = range || ed || null;
+        translateText(text, null, null);
+        return;
+      }
+      if (m.type === "pageState" || m.type === "translatePage") { // the popup asks the top page only (frame 0)
+        if (window !== window.top) return;
+        if (m.type === "translatePage") { if (page.on && (page.full || !m.full)) stopPage(); else ensurePage(true); }
+        reply({ on: page.on });
+        return;
+      }
+      if (m.type !== "run" || !document.hasFocus() || !enabled) return;
       if (cardOpen() && !streaming && result.trim()) { apply(); return; } // second press = ✓
       const el = editableFrom(deepActive());
       if (!el) return;
