@@ -1,7 +1,7 @@
 {
-  "versionCode": 23,
-  "versionName": "0.2.23",
-  "apk": "ToneFixer-0.2.23.apk",
-  "sha256": "37442112dae18a9fdc9bb857f79c438e7c2a5d5ba4ec444724d353c42e64a5f7",
-  "notes": "Bubble 30% smaller"
+  "versionCode": 24,
+  "versionName": "0.2.24",
+  "apk": "ToneFixer-0.2.24.apk",
+  "sha256": "6eee0b6a28d5ab82769b361f35463136b5bc48f0721ce417e090169bb98f0ba9",
+  "notes": "Better Persian to English; Claude Sonnet 5.5 is the default model"
 }
