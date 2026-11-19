@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "defaultProvider": "gemini",
+  "defaultProvider": "claude",
   "providers": {
     "gemini": {
       "label": "Google Gemini",
@@ -51,11 +51,11 @@
       "keyHelp": "https://console.anthropic.com/settings/keys",
       "models": [
         {
-          "id": "claude-haiku-5-5",
-          "label": "Claude Haiku 5.5",
+          "id": "claude-sonnet-5-5",
+          "label": "Claude Sonnet 5.5",
           "extra": {
             "thinking": {
-              "type": "disabled"
+              "type": "between_tools"
             },
             "output_config": {
               "effort": "low"
@@ -63,11 +63,11 @@
           }
         },
         {
-          "id": "claude-sonnet-5-5",
-          "label": "Claude Sonnet 5.5",
+          "id": "claude-haiku-5-5",
+          "label": "Claude Haiku 5.5",
           "extra": {
             "thinking": {
-              "type": "between_tools"
+              "type": "disabled"
             },
             "output_config": {
               "effort": "low"

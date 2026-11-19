@@ -79,7 +79,7 @@
 - [x] T.3 Android: Persian card (RTL, source language, modes, original, copy) in the overlay
 - [x] T.4 Android: «فارسی» and «ترجمه‌ی صفحه» in the bubble menu; select text / Share → «ترجمه به فارسی»
 - [ ] T.5 Tests + screenshots ✓ (Android 59 tests); 0.2.20 published ✓; waiting: you update inside the app (first in-app update) and try it
-- [ ] T.6 Chrome: select text → Persian (menu + card)
+- [x] T.6 Chrome 0.3.0 (asked 2026-11-19): right-click → «ترجمه به فارسی» replaces the selected text in place (card only inside text boxes); whole page in place (popup or right-click), one item per paragraph with ⟦n⟧ marks around links; Vazirmatn (Persian letters only), RTL when most of a block is Persian; toolbar popup: on/off, this site, bubble corner/by the box; bubble in the corner by default
 
 ## Phase 3w: Web app on GitHub Pages (asked 2026-11-07)
 - [x] W.1 `docs/` web app: paste → tone or «فارسی» → streaming result → copy; Claude default; key in the browser only; installable on the home screen
@@ -88,6 +88,7 @@
 - [x] W.5 «↻ Another» on Android (card button, or same tone again) and the extension (card button); shared `withEarlier` in Llm.kt / llm.js; published Android update + extension 0.2.5
 - [x] W.6 Android bubble (asked 2026-11-07): 28 dp (then 30% smaller than 40), always on screen (not on the lock screen), ghost look when idle (faint fill + wave inside a clear ring), solid on touch; published
 - [x] W.7 Extension 0.2.6 (asked 2026-11-09): the card never runs off screen (moves up for boxes low on the page, grows with the answer); all tones shown (chips wrap, fixed order) instead of a sideways-scrolling row
+- [x] W.8 Persian → English is meaning-first, not word by word (prompt: idioms/taarof examples, English sentence order, grammar re-read); live check on 6 sentences × 4 tones. Default Claude model = Sonnet 5.5 (then Haiku 5.5); Claude is the default service
 - [x] W.2 Tests (Node 17 + Chromium at iPhone size), live Claude check (Daily 1.4 s, Persian 1.4 s); merge to main · waiting: you enable Pages once
 
 ## Phase 3: iOS (planned)

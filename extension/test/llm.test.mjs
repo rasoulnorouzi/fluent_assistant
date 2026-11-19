@@ -31,7 +31,7 @@ test("gemini body", () => {
 });
 
 test("claude body and browser header", () => {
-  const m = claude.models[0].id;
+  const m = "claude-haiku-5-5";
   const b = llm.buildBody(cfg, claude, m, tone("casual"), "yo");
   assert.equal(b.model, m);
   assert.equal(b.stream, true);
@@ -54,6 +54,19 @@ test("another version: earlier answers as chat turns", () => {
   assert.deepEqual(g.contents.map((m) => m.role), ["user", "model", "user"]);
   // Same text as Android.
   assert.ok(read("android/src/main/java/app/tonefixer/Llm.kt").includes(llm.AGAIN.slice(0, 60)));
+});
+
+test("page translation: body uses translate.page; answer must line up", () => {
+  const items = ["Hello ⟦1⟧world⟦2⟧.", "Bye"];
+  const b = llm.buildPageBody(cfg, claude, "claude-haiku-5-5", items);
+  assert.ok(b.system.includes("JSON array of strings"));
+  assert.ok(b.system.includes(cfg.tones.translate.modes[0].style), "fluent (روان) style");
+  assert.equal(b.messages[0].content, `<text>\n${JSON.stringify(items)}\n</text>`);
+  const g = llm.buildPageBody(cfg, gemini, gemini.models[0].id, items);
+  assert.ok(g.systemInstruction.parts[0].text.includes("JSON array of strings"));
+  assert.deepEqual(llm.parsePageAnswer('```json\n["سلام ⟦1⟧دنیا⟦2⟧.", "خداحافظ"]\n```', 2), ["سلام ⟦1⟧دنیا⟦2⟧.", "خداحافظ"]);
+  assert.equal(llm.parsePageAnswer('["one"]', 2), null, "wrong length");
+  assert.equal(llm.parsePageAnswer("not json", 1), null);
 });
 
 test("text goes inside the markers literally ($ patterns stay as typed)", () => {

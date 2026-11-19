@@ -26,7 +26,7 @@ class LlmTest {
         assertEquals("polite", cfg.tone("polite").id)
         assertEquals("daily", cfg.tone("friendly").id) // removed tone → default
         assertEquals("daily", cfg.tone("no-such-tone").id)
-        assertEquals("gemini", cfg.provider(null).id)
+        assertEquals("claude", cfg.provider(null).id)
         assertEquals("2026-10-21", claude.headers["anthropic-version"])
         assertTrue(gemini.models.isNotEmpty() && claude.models.isNotEmpty())
         cfg.tones.forEach { assertEquals(1, it.letter.length) }
@@ -70,7 +70,7 @@ class LlmTest {
     }
 
     @Test fun claudeBody() {
-        val m = claude.models.first()
+        val m = claude.models.first { it.id == "claude-haiku-5-5" }
         val b = Llm.buildBody(cfg, claude, m.id, cfg.tone("casual"), "yo")
         assertEquals(m.id, b.getString("model"))
         assertTrue(b.getBoolean("stream"))

@@ -74,8 +74,17 @@ form), type, and a small sage bubble appears at its corner.
 3. The settings page opens: paste your Gemini or Claude key, tap **Test**, pick a tone.
 4. Optional: pin it (puzzle icon → pin) so the icon opens the settings in one click.
 
-**Using it:** the bubble sits just outside the box you're typing in (never on your text); drag it anywhere
-you like and it stays there on that site (right-click → Move back to default to undo). Click the bubble = rewrite with the current tone. Right-click or hold it = pick
+**Toolbar icon (popup):** **On** switches Tone Fixer off everywhere, **On this site** only here,
+**Bubble** = in the screen corner (default) or by the text box, and **ترجمه‌ی این صفحه به فارسی**
+translates the page in place (a small bar at the top: متن اصلی / ✕ brings the original back).
+
+**Translate to Persian:** select text on a page → right-click → **ترجمه به فارسی**: the selected
+words turn into fluent Persian right there (Vazirmatn font, right-to-left when most of the paragraph
+is Persian). Right-click anywhere → **ترجمه‌ی کل صفحه به فارسی** does the whole page as you scroll.
+Inside a text box the translation opens in a small card with a copy button.
+
+**Using it:** the bubble waits in the bottom-right corner of the screen while you type (or just outside
+the box, if you pick that in the popup); drag it anywhere you like (right-click → Move back to default to undo). Click the bubble = rewrite with the current tone. Right-click or hold it = pick
 another tone. The result appears in a card; ✓ replaces your text (Ctrl+Z undoes it), ✕ or Esc
 cancels. If you select part of the text first, only that part is rewritten. To keep the bubble away from a site, right-click it → **Hide on this site** (bring it back in
 the extension's settings → Hidden on these sites). In Gmail, your
@@ -146,3 +155,5 @@ Needs JDK 17+ and the Android SDK (`android/local.properties` → `sdk.dir=...`)
 
 Title font: [Fraunces](https://github.com/undercasetype/Fraunces) by Undercase Type, SIL Open Font
 License 1.1 (only the letters "Tone Fixer" are bundled).
+Persian font (Chrome extension translations): [Vazirmatn](https://github.com/rastikerdar/vazirmatn) by Saber
+Rastikerdar, SIL Open Font License 1.1 (the "Non-Latin" variable version; licence in `extension/vazirmatn-OFL.txt`).

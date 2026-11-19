@@ -1,6 +1,6 @@
 // Service worker: holds the settings, makes the API calls (streaming) and sends the text back to
 // the page over a port. Pages never see the API key.
-import { buildBody, withEarlier, stream, cleanKey, currentModel, modelList, chooseConfig, isNewerVersion } from "./llm.js";
+import { buildBody, withEarlier, buildPageBody, parsePageAnswer, languageLine, stream, cleanKey, currentModel, modelList, chooseConfig, isNewerVersion } from "./llm.js";
 
 let cfgPromise = null;
 /**
@@ -43,7 +43,7 @@ async function showBadge() {
 }
 
 /** Stored settings: {provider, tone, models: {gemini: picked id}, modelLists: {gemini: [ids]}, keys: {gemini: key}}. */
-const settings = () => chrome.storage.local.get({ provider: null, tone: null, models: {}, modelLists: {}, keys: {} });
+const settings = () => chrome.storage.local.get({ provider: null, tone: null, models: {}, modelLists: {}, keys: {}, translateMode: null });
 
 function pick(cfg, s) {
   const providers = cfg.providers.providers;
@@ -71,11 +71,12 @@ chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== "rewrite") return;
   const abort = new AbortController();
   port.onDisconnect.addListener(() => abort.abort());
-  port.onMessage.addListener(async ({ text, tone: toneId, earlier }) => {
+  port.onMessage.addListener(async ({ text, tone: toneId, earlier, translate }) => {
     const send = (m) => { try { port.postMessage(m); } catch { /* page closed */ } };
     const cfg = await config();
     const s = await settings();
     if (toneId) { s.tone = toneId; chrome.storage.local.set({ tone: toneId }); }
+    if (translate) return translateTo(port, send, cfg, s, text, translate, abort.signal);
     const { provider, tone, model, key } = pick(cfg, s);
     send({ type: "using", label: labelOf(provider, model) }); // the card shows which model writes this
     if (!key) return send({ type: "end", error: `Add your ${provider.label.split(" ").pop()} API key in Tone Fixer settings.`, settings: true });
@@ -86,6 +87,34 @@ chrome.runtime.onConnect.addListener((port) => {
     if (out.stop !== "cancelled") send({ type: "end", ...out, settings: !!out.error?.includes("Settings") });
   });
 });
+
+/** Translation to Persian (روان / رسمی): the first answer line names the source language → {type:"lang"}. */
+async function translateTo(port, send, cfg, s, text, modeId, signal) {
+  const t = cfg.tones.translate;
+  const m = t.modes.find((x) => x.id === modeId) || t.modes.find((x) => x.id === t.defaultMode) || t.modes[0];
+  chrome.storage.local.set({ translateMode: m.id });
+  const { provider, model, key } = pick(cfg, s);
+  send({ type: "using", label: labelOf(provider, model) });
+  if (!key) return send({ type: "end", error: `Add your ${provider.label.split(" ").pop()} API key in Tone Fixer settings.`, settings: true });
+  const ll = languageLine();
+  const out = await stream(provider, model, key, buildBody(cfg, provider, model, m, text, true), signal, (piece) => {
+    const shown = ll.feed(piece, (lang) => send({ type: "lang", lang }));
+    if (shown) send({ type: "text", text: shown });
+  });
+  const rest = ll.flush();
+  if (rest) send({ type: "text", text: rest });
+  if (out.stop !== "cancelled") send({ type: "end", ...out, settings: !!out.error?.includes("Settings") });
+}
+
+/** One batch of page pieces → Persian. {items} | {retry} (didn't line up) | {error}. */
+async function translatePieces(cfg, s, pieces) {
+  const { provider, model, key } = pick(cfg, s);
+  if (!key) return { error: "Add your API key in Tone Fixer settings." };
+  const out = await stream(provider, model, key, buildPageBody(cfg, provider, model, pieces), new AbortController().signal, () => {});
+  if (out.error) return { error: out.error };
+  const items = parsePageAnswer(out.text, pieces.length);
+  return items ? { items } : { retry: true };
+}
 
 // ---------- small requests from the page and the options page ----------
 
@@ -102,7 +131,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
         return reply({
           tones: cfg.tones.tones.map(({ id, label, letter }) => ({ id, label, letter })), tone: cur.tone.id,
           models: choices(cfg, s), current: { provider: cur.providerId, model: cur.model, label: labelOf(cur.provider, cur.model) },
+          translateModes: cfg.tones.translate.modes.map(({ id, label }) => ({ id, label })),
+          translateMode: s.translateMode || cfg.tones.translate.defaultMode,
         });
+      case "translatePieces": // page translation, one batch
+        return reply(await translatePieces(cfg, s, Array.isArray(msg.pieces) ? msg.pieces.map(String) : []));
       case "setModel": // picked in the bubble menu or the card
         await chrome.storage.local.set({ provider: msg.provider, models: { ...s.models, [msg.provider]: msg.model } });
         return reply({});
@@ -127,13 +160,30 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   return true; // reply comes asynchronously
 });
 
-// Toolbar icon → settings. Keyboard shortcut → rewrite in the focused text box of the active tab.
-chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
+// Toolbar icon → popup.html (on/off, this site, translate the page). Keyboard shortcut → rewrite.
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command === "rewrite" && tab?.id != null) chrome.tabs.sendMessage(tab.id, { type: "run" }).catch(() => {});
 });
+// Right-click on selected text → «ترجمه به فارسی» (hidden while Tone Fixer is switched off).
+async function setupMenu() {
+  const { enabled = true } = await chrome.storage.local.get("enabled");
+  await chrome.contextMenus.removeAll();
+  chrome.contextMenus.create({ id: "tf-translate", title: "ترجمه به فارسی", contexts: ["selection"], visible: enabled !== false });
+  chrome.contextMenus.create({ id: "tf-page", title: "ترجمه‌ی کل صفحه به فارسی", contexts: ["page"], visible: enabled !== false });
+}
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (tab?.id == null) return;
+  if (info.menuItemId === "tf-page") return void chrome.tabs.sendMessage(tab.id, { type: "translatePage", full: true }, { frameId: 0 }).catch(() => {});
+  if (info.menuItemId !== "tf-translate") return;
+  chrome.tabs.sendMessage(tab.id, { type: "translateSel", text: info.selectionText || "" }, { frameId: info.frameId ?? 0 }).catch(() => {});
+});
+chrome.storage.onChanged.addListener((c) => {
+  if (c.enabled) for (const id of ["tf-translate", "tf-page"]) chrome.contextMenus.update(id, { visible: c.enabled.newValue !== false }).catch(() => {});
+});
+
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === "install") chrome.runtime.openOptionsPage();
+  setupMenu();
   checkUpdates(true);
 });
 chrome.runtime.onStartup.addListener(() => checkUpdates());

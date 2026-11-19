@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Tone Fixer",
-  "version": "0.2.6",
-  "description": "Fix grammar and tone (and translate Farsi) in any text box, with your own Gemini or Claude key.",
+  "version": "0.3.0",
+  "description": "Fix grammar and tone in any text box, and translate pages or selected text to Persian, with your own Claude or Gemini key.",
   "icons": {
     "16": "icons/16.png",
     "32": "icons/32.png",
@@ -10,7 +10,8 @@
     "128": "icons/128.png"
   },
   "action": {
-    "default_title": "Tone Fixer settings",
+    "default_title": "Tone Fixer",
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/16.png",
       "32": "icons/32.png"
@@ -22,7 +23,9 @@
     "type": "module"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "contextMenus",
+    "activeTab"
   ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
@@ -49,5 +52,15 @@
       },
       "description": "Rewrite the text box you're typing in, with the last tone"
     }
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "vazirmatn.woff2"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
 }
