@@ -142,5 +142,5 @@ $("checkNow").addEventListener("click", async (e) => {
   if (next && JSON.stringify(next) !== JSON.stringify(cfg)) location.reload();
   renderUpdate(info);
 });
-renderUpdate(await chrome.runtime.sendMessage({ type: "checkUpdates", force: false }).catch(() => null));
+renderUpdate(await chrome.runtime.sendMessage({ type: "checkUpdates", force: true }).catch(() => null));
 render();
