@@ -26,7 +26,9 @@ if [ "$ARG" != "config" ]; then
     || { echo "manifest.json version $VERSION is not newer than the published $PUBLISHED: bump it first." >&2; exit 1; }
   ./pack.sh >/dev/null
   ZIP="tone-fixer-extension-$VERSION.zip"
-  find "$WT/extension" -name 'tone-fixer-extension-*.zip' -delete
+  # Keep the new zip and the previous one: a browser may still show the older "new version" notice for a while.
+  PREV=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["zip"])' "$WT/extension/latest.json" 2>/dev/null || true)
+  find "$WT/extension" -name 'tone-fixer-extension-*.zip' ! -name "${PREV:-none}" -delete
   cp "build/$ZIP" "$WT/extension/$ZIP"
   python3 - "$WT/extension/latest.json" "$VERSION" "$ZIP" "$ARG" <<'PY'
 import json, sys
