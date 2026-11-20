@@ -73,6 +73,26 @@ object Llm {
             tr?.optString("system").orEmpty(), trModes, tr?.optString("defaultMode").orEmpty())
     }
 
+    // ---------- Prompts the user edited (Settings → Advanced: prompts) ----------
+
+    /** A prompt needs "{style}" (where the tone's style goes): added at the end if the user removed it. */
+    fun withStyle(p: String) = if ("{style}" in p) p else p.trimEnd() + "\n\nStyle: {style}"
+
+    /**
+     * [cfg] with the user's own prompts: keys "system", "translate" and "tone:<id>"; anything missing or
+     * blank keeps the shipped prompt. Same as llm.js applyPrompts.
+     */
+    fun withPrompts(cfg: Config, own: Map<String, String>): Config {
+        val o = own.filterValues { it.isNotBlank() }
+        if (o.isEmpty()) return cfg
+        return Config(
+            o["system"]?.let(::withStyle) ?: cfg.system,
+            cfg.tones.map { t -> o["tone:${t.id}"]?.let { Tone(t.id, t.label, t.letter, it) } ?: t },
+            cfg.defaultTone, cfg.userTemplate, cfg.providers, cfg.defaultProvider, cfg.maxTokens,
+            o["translate"]?.let(::withStyle) ?: cfg.translateSystem, cfg.translateModes, cfg.translateDefault,
+        )
+    }
+
     // ---------- Request ----------
 
     fun maxTokens(cfg: Config, chars: Int): Int {

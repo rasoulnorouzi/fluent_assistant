@@ -69,6 +69,19 @@ test("page translation: body uses translate.page; answer must line up", () => {
   assert.equal(llm.parsePageAnswer("not json", 1), null);
 });
 
+test("user prompts: override what's set, keep the rest, add {style} if missing", () => {
+  assert.equal(llm.applyPrompts(cfg, null), cfg);
+  const c = llm.applyPrompts(cfg, { system: "Be brief.", tones: { daily: "DAILY-MINE" }, translate: "  ", page: "Pages {style}" });
+  assert.equal(c.tones.system, "Be brief.\n\nStyle: {style}");
+  assert.equal(c.tones.tones.find((t) => t.id === "daily").style, "DAILY-MINE");
+  assert.equal(c.tones.tones.find((t) => t.id === "casual").style, tone("casual").style, "other tones untouched");
+  assert.equal(c.tones.translate.system, cfg.tones.translate.system, "blank = built-in");
+  assert.equal(c.tones.translate.page, "Pages {style}");
+  assert.notEqual(cfg.tones.system, c.tones.system, "the original config is not changed");
+  const b = llm.buildBody(c, claude, "claude-haiku-5-5", c.tones.tones.find((t) => t.id === "daily"), "hi");
+  assert.equal(b.system, "Be brief.\n\nStyle: DAILY-MINE");
+});
+
 test("text goes inside the markers literally ($ patterns stay as typed)", () => {
   const b = llm.buildBody(cfg, gemini, gemini.models[0].id, tone("daily"), "pay $& now $1");
   assert.equal(b.contents[0].parts[0].text, "<text>\npay $& now $1\n</text>");

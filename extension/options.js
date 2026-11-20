@@ -1,5 +1,5 @@
 // Settings page: provider, model, key (+ Test), tone. Same choices as the Android Settings screen.
-import { buildBody, stream, cleanKey, modelList, currentModel, chooseConfig, isNewerVersion } from "./llm.js";
+import { applyPrompts, withStyle, buildBody, stream, cleanKey, modelList, currentModel, chooseConfig, isNewerVersion } from "./llm.js";
 
 const $ = (id) => document.getElementById(id);
 // Same choice as the service worker: shipped tones/models, or newer downloaded ones.
@@ -8,7 +8,7 @@ const cfg = chooseConfig({ tones: bundledTones, providers: bundledProviders }, (
 const tonesCfg = cfg.tones, providersCfg = cfg.providers;
 const providers = providersCfg.providers;
 
-let s = await chrome.storage.local.get({ provider: null, tone: null, models: {}, modelLists: {}, keys: {}, keyOk: {}, hiddenSites: [] });
+let s = await chrome.storage.local.get({ provider: null, tone: null, models: {}, modelLists: {}, keys: {}, keyOk: {}, hiddenSites: [], prompts: {} });
 let editModels = false;
 let testMsg = null; // {text, ok}
 
@@ -98,13 +98,72 @@ $("test").addEventListener("click", async () => {
   $("test").disabled = true;
   testMsg = { text: "Testing…", ok: true }; render();
   const t0 = performance.now(); let first = 0;
-  const body = buildBody(cfg, p, model, tonesCfg.tones.find((t) => t.id === "grammar"), "helo, how are you");
+  const body = buildBody(applyPrompts(cfg, s.prompts), p, model, tonesCfg.tones.find((t) => t.id === "grammar"), "helo, how are you");
   const out = await stream(p, model, key, body, new AbortController().signal, () => { first ||= performance.now(); });
   const ok = !out.error && out.text.trim() !== "";
   await save({ keyOk: { ...s.keyOk, [pid]: ok } });
   testMsg = ok ? { text: `Key works · first word in ${((first - t0) / 1000).toFixed(1)} s`, ok } : { text: out.error || "No answer from the model.", ok };
   $("test").disabled = false;
   render();
+});
+
+// ---------- Advanced: prompts (hidden behind a link) ----------
+// Defaults = the built-in prompts in use (shipped or downloaded); s.prompts holds only the edited ones.
+
+const promptItems = () => [
+  { key: "system", title: "Writing (every tone)", def: tonesCfg.system, rows: 14, style: true },
+  ...tonesCfg.tones.map((t) => ({ key: `tone:${t.id}`, title: `Tone: ${t.label}`, def: t.style, rows: 4 })),
+  { key: "translate", title: "Translation to Persian (selected text)", def: tonesCfg.translate.system, rows: 12, style: true,
+    hint: "Keep the rule that the first line names the source language: the card shows it as «از …»." },
+  { key: "page", title: "Translation of whole pages", def: tonesCfg.translate.page, rows: 12, style: true,
+    hint: "Keep the rules about the JSON array and the ⟦1⟧ marks: the page is put back together from them." },
+];
+const getOwn = (key) => (key.startsWith("tone:") ? s.prompts?.tones?.[key.slice(5)] : s.prompts?.[key]);
+function setOwn(key, value) { // value null = back to the built-in prompt
+  const pr = structuredClone(s.prompts || {});
+  if (key.startsWith("tone:")) {
+    pr.tones = { ...(pr.tones || {}) };
+    if (value == null) delete pr.tones[key.slice(5)]; else pr.tones[key.slice(5)] = value;
+  } else if (value == null) delete pr[key]; else pr[key] = value;
+  return save({ prompts: pr });
+}
+
+let savedKey = null; // shows "Saved ✓" next to the prompt just saved
+function renderPrompts() {
+  $("promptList").replaceChildren(...promptItems().map((it) => {
+    const own = getOwn(it.key);
+    const area = Object.assign(document.createElement("textarea"), { rows: it.rows, value: own ?? it.def, spellcheck: false });
+    area.dir = "auto";
+    const status = Object.assign(document.createElement("span"), { className: "status ok", textContent: savedKey === it.key ? "Saved ✓" : "" });
+    const saveBtn = Object.assign(document.createElement("button"), { className: "btn", textContent: "Save" });
+    const reset = chip("Reset to built-in ↺", false, () => { savedKey = null; setOwn(it.key, null).then(renderPrompts); });
+    reset.hidden = own == null;
+    saveBtn.addEventListener("click", async () => {
+      let v = area.value.trim();
+      if (it.style && v && !v.includes("{style}")) { v = withStyle(v); area.value = v; }
+      await setOwn(it.key, !v || v === it.def.trim() ? null : v);
+      savedKey = it.key;
+      renderPrompts();
+    });
+    const head = document.createElement("div"); head.className = "head";
+    head.append(Object.assign(document.createElement("strong"), { textContent: it.title }));
+    if (own != null) head.append(Object.assign(document.createElement("span"), { className: "tag", textContent: "edited" }));
+    const row = document.createElement("div"); row.className = "row";
+    row.append(saveBtn, reset, status);
+    const box = document.createElement("div"); box.className = "prompt";
+    box.append(head, area, row);
+    if (it.hint) box.append(Object.assign(document.createElement("p"), { className: "muted", textContent: it.hint, style: "margin:4px 0 0" }));
+    return box;
+  }));
+}
+$("advanced").addEventListener("click", (e) => {
+  e.preventDefault();
+  $("promptsBox").hidden = !$("promptsBox").hidden;
+  if (!$("promptsBox").hidden) { renderPrompts(); $("promptsBox").scrollIntoView({ behavior: "smooth" }); }
+});
+$("resetAll").addEventListener("click", (e) => {
+  e.preventDefault();
+  if (confirm("Use the built-in prompts again? Your edited prompts will be removed.")) save({ prompts: {} }).then(renderPrompts);
 });
 
 // Keep in step with changes made elsewhere (e.g. a tone picked from the bubble menu).

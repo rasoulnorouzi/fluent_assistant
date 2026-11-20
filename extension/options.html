@@ -42,6 +42,13 @@
   a { color: var(--primary); }
   .card { background: var(--card); border-radius: 20px; padding: 14px 16px; }
   kbd { font: 600 12px/1 system-ui, sans-serif; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 3px 6px; background: var(--bg); }
+  .prompt { margin-top: 18px; }
+  .prompt .head { display: flex; align-items: baseline; gap: 8px; }
+  .prompt .tag { font-size: 12px; color: var(--warn); font-weight: 600; }
+  .prompt textarea { margin-top: 6px; font: 13px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace; }
+  .prompt textarea[dir=auto] { unicode-bidi: plaintext; }
+  .prompt .row { margin-top: 6px; }
+  .prompt .chip { height: 34px; font-size: 13px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -87,7 +94,16 @@
   <h2>Hidden on these sites</h2>
   <div id="hiddenList" class="chips"></div>
   <p class="muted" id="hiddenNone">The bubble shows on every site. To hide it on one, right-click the bubble → Hide on this site.
-    To turn Tone Fixer off everywhere, use its switch in <code>chrome://extensions</code>.</p>
+    To turn Tone Fixer off everywhere, click its toolbar icon → On.</p>
+
+  <p class="muted" style="margin-top:26px"><a href="#" id="advanced">Advanced: edit the prompts ›</a></p>
+  <section id="promptsBox" hidden>
+    <h2>Prompts</h2>
+    <p class="muted">What Tone Fixer tells the model. <code>{style}</code> marks where the tone's (or translation mode's)
+      style goes. Your version is used instead of the built-in one until you reset it.</p>
+    <div id="promptList"></div>
+    <p class="muted" style="margin-top:14px"><a href="#" id="resetAll">Reset all prompts to the built-in ones ↺</a></p>
+  </section>
 
   <h2>About</h2>
   <div class="card">

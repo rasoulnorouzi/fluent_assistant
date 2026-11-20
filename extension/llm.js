@@ -225,6 +225,34 @@ export function currentModel(provider, providerId, s) {
   return list.includes(s.models?.[providerId]) ? s.models[providerId] : list[0];
 }
 
+// ---------- prompts the user edited (Settings → Advanced: prompts) ----------
+
+/** A prompt needs "{style}" (where the tone's style goes): added at the end if the user removed it. */
+export const withStyle = (p) => (p.includes("{style}") ? p : `${p.trimEnd()}\n\nStyle: {style}`);
+
+/**
+ * The config with the user's own prompts. `prompts` = {system?, translate?, page?, tones?: {id: style}};
+ * anything missing or empty keeps the shipped (or downloaded) prompt. Same as Llm.withPrompts on Android.
+ */
+export function applyPrompts(cfg, prompts) {
+  if (!prompts || typeof prompts !== "object") return cfg;
+  const own = (x) => (typeof x === "string" && x.trim() ? x : null);
+  const t = cfg.tones;
+  return {
+    ...cfg,
+    tones: {
+      ...t,
+      system: own(prompts.system) ? withStyle(prompts.system) : t.system,
+      tones: t.tones.map((x) => (own(prompts.tones?.[x.id]) ? { ...x, style: prompts.tones[x.id] } : x)),
+      translate: t.translate && {
+        ...t.translate,
+        system: own(prompts.translate) ? withStyle(prompts.translate) : t.translate.system,
+        page: own(prompts.page) ? withStyle(prompts.page) : t.translate.page,
+      },
+    },
+  };
+}
+
 // ---------- updates (newer tones/models from the repo's `updates` branch) ----------
 
 const validTones = (t) => typeof t?.system === "string" && Array.isArray(t.tones) && t.tones.length > 0 &&
