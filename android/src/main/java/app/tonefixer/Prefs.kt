@@ -57,6 +57,12 @@ class Prefs(ctx: Context) {
         get() = sp.getLong("lastUpdateCheck", 0)
         set(v) = sp.edit().putLong("lastUpdateCheck", v).apply()
 
+    /** The prompts the user edited: "system", "translate", "tone:<id>" (see Llm.withPrompts). */
+    fun prompts(): Map<String, String> = sp.all.entries.filter { it.key.startsWith("prompt|") && it.value is String }
+        .associate { it.key.removePrefix("prompt|") to it.value as String }
+    /** null = back to the built-in prompt. */
+    fun setPrompt(key: String, value: String?) = sp.edit().apply { if (value == null) remove("prompt|$key") else putString("prompt|$key", value) }.apply()
+
     fun model(provider: String): String? = sp.getString("model_$provider", null)
     fun setModel(provider: String, model: String) = sp.edit().putString("model_$provider", model).apply()
 

@@ -30,6 +30,10 @@ class SettingsActivity : Activity() {
     internal var editModels = false
     private var bubbleBack = false // internal: set by the screenshot test
     private var testStatus = ""
+    internal var showPrompts = false // Advanced: prompts (internal: the screenshot test opens it)
+    private var savedPrompt: String? = null
+    /** Android 13+ back gesture while the prompt editor is open → back to Settings (Android 16 no longer calls onBackPressed). */
+    private val backFromPrompts by lazy { if (Build.VERSION.SDK_INT >= 33) android.window.OnBackInvokedCallback { closePrompts() } else null }
 
     // In-app update state (PLAN.md §4.7). The section redraws on its own, so a background check
     // never rebuilds the screen under the user's fingers.
@@ -119,6 +123,7 @@ class SettingsActivity : Activity() {
     internal fun build() { // internal: the screenshot test redraws after changing state
         saveKey()
         root.removeAllViews()
+        if (showPrompts) { buildPrompts(); return }
         val pr = provider()
         val model = modelId(pr)
 
@@ -260,10 +265,80 @@ class SettingsActivity : Activity() {
         root.addView(small("Hold the bubble to pick another tone. Drag it to move it, or onto ✕ at the bottom to turn it off " +
             "(opening this app turns it back on). Your keys stay on this phone, encrypted."), spaced(20))
 
+        // Advanced: prompts (kept out of the way: one small link)
+        root.addView(small("Advanced: edit the prompts ›").apply {
+            setTextColor(p.primary); minHeight = dp(44); gravity = Gravity.CENTER_VERTICAL
+            setOnClickListener { openPrompts() }
+        }, spaced(16))
+
         // About & updates
-        root.addView(label("About & updates"), spaced(28))
+        root.addView(label("About & updates"), spaced(20))
         aboutBox = card().also { root.addView(it, spaced(8)) }
         renderUpdate()
+    }
+
+    // ---------- Advanced: prompts ----------
+
+    private fun openPrompts() {
+        showPrompts = true; savedPrompt = null
+        if (Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.registerOnBackInvokedCallback(
+            android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, backFromPrompts as android.window.OnBackInvokedCallback)
+        build(); (root.parent as? ScrollView)?.scrollTo(0, 0)
+    }
+
+    private fun closePrompts() {
+        showPrompts = false
+        if (Build.VERSION.SDK_INT >= 33) runCatching {
+            onBackInvokedDispatcher.unregisterOnBackInvokedCallback(backFromPrompts as android.window.OnBackInvokedCallback)
+        }
+        build(); (root.parent as? ScrollView)?.scrollTo(0, 0)
+    }
+
+    @Deprecated("Android 12 and older; newer versions use backFromPrompts")
+    override fun onBackPressed() { if (showPrompts) closePrompts() else @Suppress("DEPRECATION") super.onBackPressed() }
+
+    /** Every prompt in a box: Save (back to built-in if unchanged or empty) and Reset to built-in. */
+    private fun buildPrompts() {
+        root.addView(text("‹  Prompts", 24f, p.ink).apply {
+            typeface = Typeface.DEFAULT_BOLD; minHeight = dp(48); gravity = Gravity.CENTER_VERTICAL
+            setOnClickListener { closePrompts() }
+        })
+        root.addView(small("What Tone Fixer tells the model. {style} marks where the tone's (or translation mode's) style goes. " +
+            "Your version is used instead of the built-in one until you reset it."), spaced(4))
+        val own = prefs.prompts()
+        val items = listOf(Triple("system", "Writing (every tone)", cfg.system)) +
+            cfg.tones.map { Triple("tone:${it.id}", "Tone: ${it.label}", it.style) } +
+            Triple("translate", "Translation to Persian", cfg.translateSystem)
+        for ((key, title, def) in items) {
+            root.addView(LinearLayout(this).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(label(title))
+                if (key in own) addView(text("   edited", 12f, p.warn).apply { typeface = Typeface.DEFAULT_BOLD })
+            }, spaced(22))
+            val box = field("", own[key] ?: def).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                minLines = if (key.startsWith("tone:")) 3 else 8; maxLines = 18; gravity = Gravity.TOP or Gravity.START
+                textSize = 14f; typeface = Typeface.DEFAULT; textDirection = android.view.View.TEXT_DIRECTION_FIRST_STRONG
+            }
+            root.addView(box, spaced(6))
+            root.addView(LinearLayout(this).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(Ui.button(context, p, "Save") {
+                    var v = box.text.toString().trim()
+                    if (v.isNotEmpty() && !key.startsWith("tone:")) v = Llm.withStyle(v)
+                    prefs.setPrompt(key, if (v.isEmpty() || v == def.trim()) null else v)
+                    savedPrompt = key; build()
+                })
+                if (key in own) addView(Ui.chip(context, p, "Reset to built-in ↺", false) { prefs.setPrompt(key, null); savedPrompt = null; build() },
+                    LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
+                if (savedPrompt == key) addView(small("Saved ✓").apply { setTextColor(p.primary) },
+                    LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(10) })
+            }, spaced(6))
+            if (key == "translate") root.addView(small("Keep the rule that the first line names the source language: the card shows it as «از …»."), spaced(4))
+        }
+        root.addView(Ui.chip(this, p, "Reset all prompts to the built-in ones ↺", false) {
+            prefs.prompts().keys.forEach { prefs.setPrompt(it, null) }; savedPrompt = null; build()
+        }, spaced(28))
     }
 
     // ---------- updates ----------

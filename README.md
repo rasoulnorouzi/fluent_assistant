@@ -78,6 +78,10 @@ form), type, and a small sage bubble appears at its corner.
 **Bubble** = in the screen corner (default) or by the text box, and **ترجمه‌ی این صفحه به فارسی**
 translates the page in place (a small bar at the top: متن اصلی / ✕ brings the original back).
 
+**Advanced:** at the bottom of the extension's settings (and of the Android app's Settings), **Advanced: edit the
+prompts ›** opens the prompts: the writing prompt, each tone's style and the translation prompts. Save uses your
+version; **Reset to built-in** brings the original back.
+
 **Translate to Persian:** select text on a page → right-click → **ترجمه به فارسی**: the selected
 words turn into fluent Persian right there (Vazirmatn font, right-to-left when most of the paragraph
 is Persian). Right-click anywhere → **ترجمه‌ی کل صفحه به فارسی** does the whole page as you scroll.

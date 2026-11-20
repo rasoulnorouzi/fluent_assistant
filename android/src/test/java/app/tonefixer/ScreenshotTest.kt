@@ -29,6 +29,12 @@ class ScreenshotTest {
         build()
     }
 
+    @Test fun settingsPrompts() = shoot("settings-prompts") {
+        Prefs(this).setPrompt("tone:daily", "My own Daily style.")
+        showPrompts = true
+        build()
+    }
+
     @Test fun settingsUpdateReady() = shoot("settings-update") {
         updInfo = Update.Info(99, "0.2.99", "https://example.com/a.apk", "00", "Faster bubble, and a fix for Telegram.")
         updStatus = "Version 0.2.99 is ready."

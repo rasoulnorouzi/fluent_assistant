@@ -1,6 +1,6 @@
 // Service worker: holds the settings, makes the API calls (streaming) and sends the text back to
 // the page over a port. Pages never see the API key.
-import { buildBody, withEarlier, buildPageBody, parsePageAnswer, languageLine, stream, cleanKey, currentModel, modelList, chooseConfig, isNewerVersion } from "./llm.js";
+import { applyPrompts, buildBody, withEarlier, buildPageBody, parsePageAnswer, languageLine, stream, cleanKey, currentModel, modelList, chooseConfig, isNewerVersion } from "./llm.js";
 
 let cfgPromise = null;
 /**
@@ -10,8 +10,9 @@ let cfgPromise = null;
 function config() {
   cfgPromise ??= (async () => {
     const [tones, providers] = await Promise.all(["tones.json", "providers.json"].map((f) => fetch(chrome.runtime.getURL(f)).then((r) => r.json())));
-    const { remoteCfg } = await chrome.storage.local.get("remoteCfg");
-    return chooseConfig({ tones, providers }, remoteCfg);
+    const { remoteCfg, prompts } = await chrome.storage.local.get(["remoteCfg", "prompts"]);
+    return applyPrompts(chooseConfig({ tones, providers }, remoteCfg), prompts); // the user's own prompts win
+
   })();
   return cfgPromise;
 }
@@ -178,6 +179,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   chrome.tabs.sendMessage(tab.id, { type: "translateSel", text: info.selectionText || "" }, { frameId: info.frameId ?? 0 }).catch(() => {});
 });
 chrome.storage.onChanged.addListener((c) => {
+  if (c.prompts) cfgPromise = null; // edited in Settings → Advanced: prompts
   if (c.enabled) for (const id of ["tf-translate", "tf-page"]) chrome.contextMenus.update(id, { visible: c.enabled.newValue !== false }).catch(() => {});
 });
 

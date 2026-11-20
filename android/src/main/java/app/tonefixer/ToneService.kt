@@ -228,7 +228,9 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
         result = StringBuilder()
         // A translation starts with a line naming the source language: shown in the header, not in the text.
         val lang = if (translate) TextOps.LanguageLine() else null
-        val body = Llm.withEarlier(Llm.buildBody(cfg, pr, model, tone, input, translate), pr.format, earlier)
+        // The user's own prompts (Settings → Advanced), read on every run so a change works at once.
+        val own = Llm.withPrompts(cfg, prefs.prompts())
+        val body = Llm.withEarlier(Llm.buildBody(own, pr, model, if (translate) tone else own.tone(tone.id), input, translate), pr.format, earlier)
         thread(name = "tonefixer-llm") {
             val out = Llm.stream(pr, model, key, body, c) { piece ->
                 main.post {

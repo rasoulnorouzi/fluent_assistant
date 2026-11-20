@@ -5,6 +5,7 @@ import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -93,6 +94,17 @@ class LlmTest {
         assertEquals("model", cs.getJSONObject(1).getString("role"))
         assertEquals("user", cs.getJSONObject(2).getString("role"))
         assertEquals(1, Llm.withEarlier(Llm.buildBody(cfg, claude, claude.models.first().id, cfg.tone("daily"), "hi"), "claude", emptyList()).getJSONArray("messages").length())
+    }
+
+    @Test fun userPromptsOverrideOnlyWhatIsSet() {
+        assertSame(cfg, Llm.withPrompts(cfg, emptyMap()))
+        val c = Llm.withPrompts(cfg, mapOf("system" to "Be brief.", "tone:daily" to "DAILY-MINE", "translate" to "  "))
+        assertEquals("Be brief.\n\nStyle: {style}", c.system)
+        assertEquals("DAILY-MINE", c.tone("daily").style)
+        assertEquals(cfg.tone("casual").style, c.tone("casual").style)
+        assertEquals(cfg.translateSystem, c.translateSystem) // blank = built-in
+        val b = Llm.buildBody(c, claude, "claude-haiku-5-5", c.tone("daily"), "hi")
+        assertEquals("Be brief.\n\nStyle: DAILY-MINE", b.getString("system"))
     }
 
     @Test fun customModelGetsNoExtra() {

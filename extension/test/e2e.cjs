@@ -484,6 +484,41 @@ function mockServer() {
     await page.emulateMedia({ colorScheme: "light" });
   });
 
+  await check("Advanced: prompts → edit a tone's style → used by the bubble → reset", async () => {
+    const o = await ctx.newPage();
+    await o.goto(`chrome-extension://${extId}/options.html`);
+    assert.equal(await o.locator("#promptsBox").isVisible(), false, "hidden until the link is clicked");
+    await o.click("#advanced");
+    const daily = o.locator(".prompt", { hasText: "Tone: Daily" });
+    await daily.locator("textarea").fill("PROMPT-MARK: say it like a pirate.");
+    await daily.locator(".btn").click();
+    await o.locator(".prompt", { hasText: "Tone: Daily" }).locator(".tag").waitFor();
+    const sys = o.locator(".prompt", { hasText: "Writing (every tone)" });
+    await sys.locator("textarea").fill("Fix it. No {style} line here");
+    await sys.locator(".btn").click();
+    await o.locator(".prompt", { hasText: "Writing (every tone)" }).locator(".tag").waitFor();
+    assert.equal(await sw.evaluate(() => chrome.storage.local.get("prompts").then((s) => s.prompts.system)), "Fix it. No {style} line here");
+    await o.locator("#promptsBox").screenshot({ path: path.join(SHOTS, "ext-prompts.png") });
+    await sw.evaluate(() => chrome.storage.local.set({ tone: "daily" }));
+    await page.bringToFront();
+    await page.waitForTimeout(200);
+    await page.fill("#ta", "prompt test");
+    await page.click("#ta");
+    await bubble.click();
+    await ui.locator(".ok:not([disabled])").waitFor();
+    const used = lastBody.systemInstruction.parts[0].text;
+    assert.ok(used.startsWith("Fix it. No PROMPT-MARK: say it like a pirate. line here"), used);
+    await ui.locator(".x").click();
+    await o.bringToFront();
+    await o.locator("#resetAll").click().catch(() => {});
+    await sw.evaluate(() => chrome.storage.local.set({ prompts: {} }));
+    await o.reload(); await o.click("#advanced");
+    assert.equal(await o.locator(".prompt .tag").count(), 0, "nothing edited after reset");
+    assert.ok((await o.locator(".prompt", { hasText: "Writing (every tone)" }).locator("textarea").inputValue()).startsWith("You rewrite a message"));
+    await o.close();
+    await page.bringToFront();
+  });
+
   await check("options page renders, Try-it box has the bubble", async () => {
     const o = await ctx.newPage();
     await o.goto(`chrome-extension://${extId}/options.html`);
