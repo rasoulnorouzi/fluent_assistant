@@ -1,5 +1,6 @@
 // Settings page: provider, model, key (+ Test), tone. Same choices as the Android Settings screen.
 import { applyPrompts, withStyle, buildBody, stream, cleanKey, modelList, currentModel, chooseConfig, isNewerVersion } from "./llm.js";
+if (typeof browser !== "undefined") globalThis.chrome = browser; // Firefox: its own promise-based API
 
 const $ = (id) => document.getElementById(id);
 // Same choice as the service worker: shipped tones/models, or newer downloaded ones.
@@ -174,7 +175,11 @@ chrome.storage.onChanged.addListener((changes) => {
 
 const cmd = (await chrome.commands.getAll()).find((c) => c.name === "rewrite");
 $("shortcut").textContent = cmd?.shortcut || "not set";
-$("shortcuts").addEventListener("click", (e) => { e.preventDefault(); chrome.tabs.create({ url: "chrome://extensions/shortcuts" }); });
+$("shortcuts").addEventListener("click", (e) => {
+  e.preventDefault();
+  if (chrome.commands.openShortcutSettings) chrome.commands.openShortcutSettings(); // Firefox
+  else chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+});
 // ---------- About & updates ----------
 
 const VERSION = chrome.runtime.getManifest().version;
@@ -186,7 +191,9 @@ function renderUpdate(info) {
   if (fresh) {
     $("newVersion").textContent = latest.version;
     $("newNotes").textContent = latest.notes || "";
-    $("download").href = new URL(latest.zip, "https://raw.githubusercontent.com/rasoulnorouzi/fluent_assistant/updates/extension/").href;
+    // Firefox gets the .xpi with the same version (published next to the Chrome zip).
+    const file = typeof browser !== "undefined" ? `tone-fixer-firefox-${latest.version}.xpi` : latest.zip;
+    $("download").href = new URL(file, "https://raw.githubusercontent.com/rasoulnorouzi/fluent_assistant/updates/extension/").href;
   }
   $("updateState").textContent = fresh ? "" : lastCheck
     ? `Up to date. Tones and models update by themselves (last checked ${new Date(lastCheck).toLocaleString()}).`

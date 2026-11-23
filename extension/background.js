@@ -1,6 +1,7 @@
 // Service worker: holds the settings, makes the API calls (streaming) and sends the text back to
 // the page over a port. Pages never see the API key.
 import { applyPrompts, buildBody, withEarlier, buildPageBody, parsePageAnswer, languageLine, stream, cleanKey, currentModel, modelList, chooseConfig, isNewerVersion } from "./llm.js";
+if (typeof browser !== "undefined") globalThis.chrome = browser; // Firefox: its own promise-based API
 
 let cfgPromise = null;
 /**

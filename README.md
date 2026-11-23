@@ -109,6 +109,21 @@ and is only sent to the provider you chose. Pages can't read it.
 packages) and `node extension/test/e2e.cjs` (real extension in Chromium against a mock API; needs
 Playwright).
 
+## Firefox (laptops)
+
+The same extension, built for Firefox 140 or newer: `extension/pack.sh` also makes
+`extension/build/tone-fixer-firefox-<version>.xpi` (published on the `updates` branch too).
+
+- **Try it now (until Firefox restarts):** `about:debugging` → **This Firefox** → **Load Temporary
+  Add-on…** → pick the `.xpi`.
+- **Keep it installed:** regular Firefox only installs add-ons signed by Mozilla. Signing is free and
+  stays private ("unlisted"): sign in at addons.mozilla.org → **Submit a New Add-on** → **On your own**
+  → upload the `.xpi` → download the signed file and drag it into Firefox. (Firefox Developer
+  Edition/Nightly can skip signing: `about:config` → `xpinstall.signatures.required` = false.)
+
+Everything works as in Chrome (bubble, tones, toolbar popup, right-click «ترجمه به فارسی», page
+translation, settings). New versions don't announce themselves in Firefox yet: download the new `.xpi`.
+
 ## Android updates (inside the app)
 
 Open Tone Fixer → scroll to **About & updates**. The app checks by itself when you open it (at

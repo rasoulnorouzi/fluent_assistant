@@ -5,8 +5,29 @@
 (() => {
   if (window.__toneFixer) return;
   window.__toneFixer = true;
+  // Firefox: its own `browser` API (promises everywhere); Chrome has only `chrome`.
+  const FIREFOX = typeof browser !== "undefined";
+  const chrome = FIREFOX ? browser : globalThis.chrome;
 
   // ---------- small helpers ----------
+
+  /**
+   * Styles for our shadow root or the page. Chrome: a constructed stylesheet (strict sites with a CSP
+   * allow it). Firefox can't adopt a sheet made by an extension, so it gets a plain <style>.
+   */
+  function addCss(target, css) {
+    if (!FIREFOX) {
+      try {
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(css);
+        target.adoptedStyleSheets = [...target.adoptedStyleSheets, sheet];
+        return;
+      } catch { /* fall through to <style> */ }
+    }
+    const st = document.createElement("style");
+    st.textContent = css;
+    (target === document ? document.head || document.documentElement : target).append(st);
+  }
 
   const SVG = "http://www.w3.org/2000/svg";
   function h(tag, attrs = {}, ...kids) {
@@ -250,9 +271,7 @@
     const host = h("tone-fixer-ui");
     host.style.cssText = "all:initial;position:fixed;top:0;left:0;width:0;height:0;z-index:2147483647;";
     const root = host.attachShadow({ mode: "open" });
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(CSS);
-    root.adoptedStyleSheets = [sheet];
+    addCss(root, CSS);
 
     // Keep the page's focus and selection in the text box when our buttons are pressed.
     const keepFocus = (e) => e.preventDefault();
@@ -871,10 +890,10 @@
       fetch(chrome.runtime.getURL("vazirmatn.woff2")).then((r) => r.arrayBuffer())
         .then((buf) => new FontFace("TF Vazirmatn", buf, { weight: "100 900" }).load())
         .then((f) => document.fonts.add(f)).catch(() => {});
-      const sheet = new CSSStyleSheet();
-      sheet.replaceSync(`[data-tf-fa] { font-family: "TF Vazirmatn", var(--tf-font, system-ui), sans-serif !important; }
+      // Firefox: also name the font by URL, in case the FontFace above isn't shared with the page.
+      addCss(document, `${FIREFOX ? `@font-face { font-family: "TF Vazirmatn"; src: url("${chrome.runtime.getURL("vazirmatn.woff2")}") format("woff2"); font-weight: 100 900; }` : ""}
+        [data-tf-fa] { font-family: "TF Vazirmatn", var(--tf-font, system-ui), sans-serif !important; }
         [data-tf-fa][data-tf-left] { text-align: right !important; }`);
-      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
     } catch { /* very old page setup: Persian still shows, in the site's font */ }
   }
 
