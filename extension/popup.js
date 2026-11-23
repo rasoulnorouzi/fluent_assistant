@@ -1,6 +1,7 @@
 // Toolbar popup: switch Tone Fixer off (everywhere or on this site), where the bubble sits, and
 // "translate this page to Persian" (sent to the page's top frame, which does the work).
 import { isNewerVersion } from "./llm.js";
+if (typeof browser !== "undefined") globalThis.chrome = browser; // Firefox: its own promise-based API
 
 const $ = (id) => document.getElementById(id);
 const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

@@ -90,6 +90,7 @@
 - [x] W.7 Extension 0.2.6 (asked 2026-11-09): the card never runs off screen (moves up for boxes low on the page, grows with the answer); all tones shown (chips wrap, fixed order) instead of a sideways-scrolling row
 - [x] W.8 Persian → English is meaning-first, not word by word (prompt: idioms/taarof examples, English sentence order, grammar re-read); live check on 6 sentences × 4 tones. Default Claude model = Sonnet 5.5 (then Haiku 5.5); Claude is the default service
 - [x] W.9 Advanced: prompts (asked 2026-11-20), behind a small link in Settings (Android) and the options page (extension): writing prompt, each tone's style, translation (and whole-page translation in Chrome); Save / Reset to built-in / Reset all; {style} added if removed. Model check: no newer Claude Haiku/Sonnet; Gemini 3.8 Flash exists but failed live (server errors), not added. Prompt: a full rewrite tested worse on Haiku, so kept the current one and fixed Polite (no invented requests) + "Thank you for understanding" cliché. Extension 0.3.1, Android update
+- [x] W.10 Firefox build (asked 2026-11-23): pack.sh also makes tone-fixer-firefox-<v>.xpi (background scripts + type module, options_ui, gecko id, min 140, data_collection websiteContent); `browser` shim, <style> instead of adopted sheets in Firefox; web-ext lint 0/0/0; not run in a real Firefox here (Mozilla downloads blocked) → user to try
 - [x] W.2 Tests (Node 17 + Chromium at iPhone size), live Claude check (Daily 1.4 s, Persian 1.4 s); merge to main · waiting: you enable Pages once
 
 ## Phase 3: iOS (planned)

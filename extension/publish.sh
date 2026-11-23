@@ -30,6 +30,9 @@ if [ "$ARG" != "config" ]; then
   PREV=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["zip"])' "$WT/extension/latest.json" 2>/dev/null || true)
   find "$WT/extension" -name 'tone-fixer-extension-*.zip' ! -name "${PREV:-none}" -delete
   cp "build/$ZIP" "$WT/extension/$ZIP"
+  # Firefox build: only the newest (it has no update notice of its own yet).
+  find "$WT/extension" -name 'tone-fixer-firefox-*.xpi' -delete
+  cp "build/tone-fixer-firefox-$VERSION.xpi" "$WT/extension/"
   python3 - "$WT/extension/latest.json" "$VERSION" "$ZIP" "$ARG" <<'PY'
 import json, sys
 path, version, zip_, notes = sys.argv[1:]
