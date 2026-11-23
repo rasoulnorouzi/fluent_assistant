@@ -1,5 +1,5 @@
 {
-  "version": "0.3.1",
-  "zip": "tone-fixer-extension-0.3.1.zip",
-  "notes": "Advanced: edit the prompts (bottom of Settings); better Polite tone"
+  "version": "0.3.2",
+  "zip": "tone-fixer-extension-0.3.2.zip",
+  "notes": "Firefox version (.xpi); small fixes"
 }
