@@ -1,5 +1,5 @@
 {
-  "version": "0.3.2",
-  "zip": "tone-fixer-extension-0.3.2.zip",
-  "notes": "Firefox version (.xpi); small fixes"
+  "version": "0.4.0",
+  "zip": "tone-fixer-extension-0.4.0.zip",
+  "notes": "Voice typing (Persian/English) with Gemini: bubble menu or Alt+Shift+V"
 }
