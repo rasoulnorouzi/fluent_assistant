@@ -1,5 +1,5 @@
 {
-  "version": "0.4.0",
-  "zip": "tone-fixer-extension-0.4.0.zip",
-  "notes": "Voice typing (Persian/English) with Gemini: bubble menu or Alt+Shift+V"
+  "version": "0.4.1",
+  "zip": "tone-fixer-extension-0.4.1.zip",
+  "notes": "Tidier bubble menu; double-click the bubble for voice typing"
 }
