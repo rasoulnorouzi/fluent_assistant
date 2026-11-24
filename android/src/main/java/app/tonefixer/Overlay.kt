@@ -239,6 +239,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         private val slop = ViewConfiguration.get(ctx).scaledTouchSlop
         private var downX = 0f; private var downY = 0f; private var startX = 0; private var startY = 0
         private var dragging = false; private var longFired = false
+        private val singleTap = Runnable { cb.onTap() }
         private val longPress = Runnable { longFired = true; bubble.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); showMenu() }
 
         override fun onTouch(v: View, e: MotionEvent): Boolean {
@@ -267,7 +268,12 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                     when {
                         dragging && armed && e.actionMasked == MotionEvent.ACTION_UP -> { hideTarget(); cb.onDismiss() }
                         dragging -> { hideTarget(); snapToSide(e.rawX) }
-                        !longFired && e.actionMasked == MotionEvent.ACTION_UP -> { hideMenu(); cb.onTap() }
+                        !longFired && e.actionMasked == MotionEvent.ACTION_UP -> {
+                            hideMenu()
+                            // Double tap = voice typing; a single tap (rewrite) waits a moment to be sure it isn't one.
+                            if (main.hasCallbacks(singleTap)) { main.removeCallbacks(singleTap); cb.onVoice() }
+                            else main.postDelayed(singleTap, 280)
+                        }
                     }
                 }
             }
@@ -305,7 +311,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             background = Ui.round(p.card, dp(22).toFloat())
             elevation = dp(10).toFloat()
             setPadding(dp(8), dp(8), dp(8), dp(8))
-            addView(actionRow("🎤", "Voice typing", "Speak Persian or English: the words are typed into the box") { cb.onVoice() })
+            addView(actionRow("🎤", "Voice typing  ·  double-tap", "Speak Persian or English: the words are typed into the box. Shortcut: double-tap the bubble.") { cb.onVoice() })
             addView(View(ctx).apply { setBackgroundColor(p.line) }, LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(10), dp(4), dp(10), dp(4)) })
             addView(TextView(ctx).apply {
                 text = "REWRITE AS"; textSize = 11f; letterSpacing = 0.08f; typeface = Typeface.DEFAULT_BOLD
@@ -320,14 +326,6 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
                 })
                 addView(actionRow("ف", "فارسی", "Translate the text in this box") { cb.onTranslate(screen = false) })
                 addView(actionRow("⧉", "ترجمه‌ی صفحه", "Translate what's on screen") { cb.onTranslate(screen = true) })
-            }
-            if (models.size > 1) {
-                addView(View(ctx).apply { setBackgroundColor(p.line) }, LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(10), dp(6), dp(10), dp(4)) })
-                addView(TextView(ctx).apply {
-                    text = "MODEL"; textSize = 11f; letterSpacing = 0.08f; typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(p.muted); setPadding(dp(10), dp(6), dp(10), dp(6))
-                })
-                models.forEach { m -> addView(modelRow(m, m.provider == this@Overlay.current?.provider && m.model == this@Overlay.current?.model)) }
             }
         }
         val maxH = (screenH() * 0.75f).toInt()
@@ -366,32 +364,6 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         isClickable = true
         contentDescription = description
         setOnClickListener { hideMenu(); onClick() }
-    }
-
-    private fun modelRow(m: ModelChoice, selected: Boolean) = LinearLayout(ctx).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        minimumHeight = dp(44)
-        setPadding(dp(10), 0, dp(10), 0)
-        background = Ui.ripple(Ui.round(if (selected) p.primary else 0, dp(14).toFloat()), 0x28000000)
-        addView(View(ctx).apply { // a dot: filled = in use
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                if (selected) setColor(p.onPrimary) else setStroke(dp(2), p.muted)
-            }
-        }, LinearLayout.LayoutParams(dp(12), dp(12)).apply { setMargins(dp(7), 0, dp(7), 0) })
-        addView(LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(6), 0, dp(6))
-            addView(TextView(ctx).apply {
-                text = m.label; textSize = 14f
-                setTextColor(if (selected) p.onPrimary else p.ink)
-                if (selected) typeface = Typeface.DEFAULT_BOLD
-            })
-            addView(TextView(ctx).apply { text = m.service; textSize = 11f; setTextColor(if (selected) p.onPrimary else p.muted) })
-        })
-        isClickable = true
-        contentDescription = "Use ${m.label}"
-        setOnClickListener { hideMenu(); cb.onPickModel(m.provider, m.model) }
     }
 
     private fun menuRow(t: Llm.Tone, selected: Boolean) = LinearLayout(ctx).apply {

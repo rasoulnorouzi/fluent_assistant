@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tone Fixer",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Fix grammar and tone in any text box, and translate pages or selected text to Persian, with your own Claude or Gemini key.",
   "icons": {
     "16": "icons/16.png",

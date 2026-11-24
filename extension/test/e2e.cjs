@@ -451,16 +451,18 @@ function mockServer() {
     await bubble.waitFor({ state: "visible" });
   });
 
-  await check("pick a model in the menu; card shows it; ⇄ reruns with the next model", async () => {
+  await check("model picked in Settings (not in the bubble menu); card shows it; ⇄ reruns with the next model", async () => {
     await sw.evaluate(() => chrome.storage.local.set({ keys: { gemini: "test-key", claude: "test-key" } }));
     await page.fill("#ta", "see you at 5");
     await page.click("#ta");
     await page.waitForTimeout(300); // state reloads after the key change
     await bubble.click({ button: "right" });
-    assert.deepEqual(await ui.locator(".model-row .two span").allTextContents(), ["Gemini 3.5 Flash-Lite", "Gemini 3.1 Flash-Lite", "Claude Sonnet 5.5", "Claude Haiku 5.5"]);
-    await shot("ext-menu-models");
-    await ui.locator(".model-row", { hasText: "Claude Haiku 5.5" }).click();
-    await page.waitForTimeout(200);
+    assert.equal(await ui.locator(".model-row").count(), 0, "no models in the bubble menu");
+    assert.ok((await ui.locator(".menu .row").first().textContent()).startsWith("Voice typing"));
+    await shot("ext-menu");
+    await page.keyboard.press("Escape");
+    await sw.evaluate(() => chrome.storage.local.get("models").then((s) => chrome.storage.local.set({ provider: "claude", models: { ...s.models, claude: "claude-haiku-5-5" } })));
+    await page.waitForTimeout(300);
     await bubble.click();
     await ui.locator(".ok:not([disabled])").waitFor();
     assert.equal(await ui.locator(".body").textContent(), "Claude: see you at 5");
@@ -471,6 +473,17 @@ function mockServer() {
     assert.match(await ui.locator(".card .model").textContent(), /^Gemini 3\.5 Flash-Lite/);
     await ui.locator(".x").click();
     await sw.evaluate(() => chrome.storage.local.set({ keys: { gemini: "test-key" }, provider: "gemini" }));
+  });
+
+  await check("double-click the bubble = voice typing (no microphone here → clear message)", async () => {
+    await page.fill("#ta", "voice");
+    await page.click("#ta");
+    await bubble.dblclick();
+    await ui.locator(".card .title", { hasText: "Voice typing" }).waitFor();
+    assert.match(await ui.locator(".card .status").textContent(), /microphone/i);
+    assert.equal(await page.inputValue("#ta"), "voice", "no rewrite happened");
+    await ui.locator(".x").click();
+    await card.waitFor({ state: "hidden" });
   });
 
   await check("dark mode card", async () => {
