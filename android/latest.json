@@ -1,7 +1,7 @@
 {
-  "versionCode": 26,
-  "versionName": "0.2.26",
-  "apk": "ToneFixer-0.2.26.apk",
-  "sha256": "ce85217d0bf15468965dcbfffca5db3e78757aa380c249906fcd1811c892d887",
-  "notes": "Voice typing (Persian/English): hold the bubble \u2192 Voice typing"
+  "versionCode": 27,
+  "versionName": "0.2.27",
+  "apk": "ToneFixer-0.2.27.apk",
+  "sha256": "01ac849d0fce7861cd49d02c1529cc34376c6e52b000f2ec744ee3d7a4c2e85a",
+  "notes": "Tidier bubble menu; double-tap the bubble for voice typing"
 }
