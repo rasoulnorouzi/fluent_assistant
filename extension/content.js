@@ -283,9 +283,9 @@
 
     const badge = h("span", { class: "badge" });
     const bubble = h("button", { class: "bubble", hidden: true, "aria-label": "Tone Fixer: rewrite (hold for tones)",
-      title: "Tone Fixer · click: rewrite · right-click: pick a tone · drag: move it" }, icon(WAVE, 22), badge);
+      title: "Tone Fixer · click: rewrite · double-click: voice typing · right-click: tones · drag: move it" }, icon(WAVE, 22), badge);
     // Click = rewrite, hold = menu, drag = move (the spot is remembered for this site).
-    let holdTimer = 0, held = false, drag = null;
+    let holdTimer = 0, held = false, drag = null, tapTimer = 0;
     bubble.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       if (e.button !== 0) return;
@@ -311,7 +311,11 @@
       bubble.classList.remove("dragging");
       if (d?.moved) { savePosition(); return; }
       if (voice) { stopVoice(); return; } // recording: a click stops it
-      if (!held) { hideMenu(); run(tone, true); }
+      if (held) return;
+      hideMenu();
+      // Double click = voice typing; a single click (rewrite) waits a moment to be sure it isn't one.
+      if (tapTimer) { clearTimeout(tapTimer); tapTimer = 0; toggleVoice(); }
+      else tapTimer = setTimeout(() => { tapTimer = 0; run(tone, true); }, 280);
     });
     bubble.addEventListener("pointercancel", () => { clearTimeout(holdTimer); drag = null; bubble.classList.remove("dragging"); });
     bubble.addEventListener("contextmenu", (e) => { e.preventDefault(); showMenu(); });
@@ -480,7 +484,7 @@
     const m = ui.menu;
     m.replaceChildren(
       h("button", { class: "row voice-row", role: "menuitem", title: "Speak Persian or English: the words are typed into the box (Alt+Shift+V)", onclick: () => { hideMenu(); toggleVoice(); } },
-        h("span", { class: "letter" }, icon(MIC, 14)), h("span", { class: "two" }, h("span", {}, "Voice typing"), h("small", {}, "Persian or English · Gemini"))),
+        h("span", { class: "letter" }, icon(MIC, 14)), h("span", { class: "two" }, h("span", {}, "Voice typing"), h("small", {}, "Double-click the bubble · Alt+Shift+V"))),
       h("div", { class: "sep" }),
       h("div", { class: "head" }, "REWRITE AS"));
     for (const t of tones) {
@@ -489,15 +493,6 @@
         tone = t.id; setLetter();
         run(t.id, !(snap && cardOpen()));
       } }, h("span", { class: "letter" }, t.letter), h("span", {}, t.label)));
-    }
-    if (models.length > 1) {
-      m.append(h("div", { class: "sep" }), h("div", { class: "head" }, "MODEL"));
-      for (const x of models) {
-        const sel = current && x.provider === current.provider && x.model === current.model;
-        m.append(h("button", { class: `row model-row${sel ? " sel" : ""}`, role: "menuitemradio", "aria-checked": String(!!sel), onclick: () => {
-          hideMenu(); useModel(x, cardOpen() && !!snap);
-        } }, h("span", { class: "dot" }), h("span", { class: "two" }, h("span", {}, x.label), h("small", {}, x.service))));
-      }
     }
     m.append(h("div", { class: "sep" }));
     if (where === "corner" ? cornerPos : positions[SITE]) m.append(h("button", { class: "row off", role: "menuitem", onclick: () => { hideMenu(); resetPosition(); } },
