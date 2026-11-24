@@ -34,7 +34,11 @@
             }
           }
         }
-      ]
+      ],
+      "voice": {
+        "model": "gemini-3.5-transcribe-live",
+        "url": "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
+      }
     },
     "claude": {
       "label": "Anthropic Claude",

@@ -35,6 +35,13 @@ class ScreenshotTest {
         build()
     }
 
+    @Test fun voicePanel() {
+        val a = Robolectric.buildActivity(VoiceActivity::class.java).setup().get()
+        val root = (a.findViewById<View>(android.R.id.content) as android.view.ViewGroup).getChildAt(0)
+        root.layoutParams = android.view.ViewGroup.LayoutParams(784, 700)
+        save(root.also { it.setBackgroundColor(0xFF8A8F86.toInt()) }, "voice-panel")
+    }
+
     @Test fun settingsUpdateReady() = shoot("settings-update") {
         updInfo = Update.Info(99, "0.2.99", "https://example.com/a.apk", "00", "Faster bubble, and a fix for Telegram.")
         updStatus = "Version 0.2.99 is ready."
@@ -62,6 +69,7 @@ class ScreenshotTest {
             override fun onTranslate(screen: Boolean) {}
             override fun onPickTranslateMode(id: String) {}
             override fun onAnother() {}
+            override fun onVoice() {}
         }).apply {
             setTones(cfg.tones)
             setTranslateModes(cfg.translateModes)

@@ -6,8 +6,9 @@
   if (window.__toneFixer) return;
   window.__toneFixer = true;
   // Firefox: its own `browser` API (promises everywhere); Chrome has only `chrome`.
-  const FIREFOX = typeof browser !== "undefined";
-  const chrome = FIREFOX ? browser : globalThis.chrome;
+  // (Newer Chrome also has `browser`, so Firefox is told apart by its moz-extension:// address.)
+  const chrome = typeof browser !== "undefined" ? browser : globalThis.chrome;
+  const FIREFOX = (() => { try { return chrome.runtime.getURL("").startsWith("moz-extension:"); } catch { return false; } })();
 
   // ---------- small helpers ----------
 
@@ -46,6 +47,7 @@
   const CHECK = "M5 12.5l4.5 4.5L19 7.5";
   const CLOSE = "M6.5 6.5l11 11M17.5 6.5l-11 11";
   const AGAIN = "M19.5 12a7.5 7.5 0 1 1-2.2-5.3M18 3v4.2h-4.2";
+  const MIC = "M12 3.5a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0v-5a3 3 0 0 0-3-3zM6 11.5a6 6 0 0 0 12 0M12 17.5V21";
 
   const looksFarsi = (s) => /[؀-ۿﭐ-﷿]/.test(s);
   const keepOuterSpace = (input, out) => input.match(/^\s*/)[0] + out.trim() + input.match(/\s*$/)[0];
@@ -196,6 +198,9 @@
   .badge { position: absolute; top: -5px; right: -6px; min-width: 17px; height: 17px; border-radius: 9px;
            background: var(--clay-deep); color: #FBF8F1; font: 700 10px/17px system-ui, sans-serif; text-align: center;
            padding: 0 4px; box-shadow: 0 0 0 2px var(--card); }
+  .bubble.rec { background: var(--clay-deep); opacity: 1; animation: rec 1.2s ease-in-out infinite; }
+  @keyframes rec { 0%,100% { box-shadow: 0 0 0 0 rgba(196,122,90,.7), 0 2px 8px rgba(0,0,0,.22); }
+                   50% { box-shadow: 0 0 0 7px rgba(196,122,90,.15), 0 2px 8px rgba(0,0,0,.22); } }
   .bubble.working { background: #4F6B55; opacity: 1; animation: pulse 1.1s ease-in-out infinite; }
   .bubble.error { box-shadow: 0 0 0 3px var(--clay-deep), 0 2px 8px rgba(0,0,0,.22); opacity: 1; }
   .bubble.shake { animation: shake .35s; }
@@ -305,6 +310,7 @@
       const d = drag; drag = null;
       bubble.classList.remove("dragging");
       if (d?.moved) { savePosition(); return; }
+      if (voice) { stopVoice(); return; } // recording: a click stops it
       if (!held) { hideMenu(); run(tone, true); }
     });
     bubble.addEventListener("pointercancel", () => { clearTimeout(holdTimer); drag = null; bubble.classList.remove("dragging"); });
@@ -356,7 +362,7 @@
   const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; place(); }); };
 
   function shouldShow() {
-    return field && field.isConnected && (cardOpen() && mode === "rewrite" || (enabled && !hiddenHere && currentText(field).trim() !== ""));
+    return field && field.isConnected && (!!voice || cardOpen() && mode === "rewrite" || (enabled && !hiddenHere && currentText(field).trim() !== ""));
   }
 
   function place() {
@@ -448,6 +454,7 @@
 
   document.addEventListener("focusin", (e) => onFocus(e.composedPath()[0]), true);
   document.addEventListener("focusout", () => setTimeout(() => {
+    if (voice && !voice.stopping && editableFrom(deepActive()) !== voice.el && document.hasFocus()) { stopVoice(); return; } // left the box
     if (!field || cardOpen()) return;
     const a = deepActive();
     if (a && editableFrom(a) === field) return;
@@ -459,6 +466,7 @@
   window.addEventListener("resize", schedule, { passive: true });
   document.addEventListener("pointerdown", (e) => { if (ui && !ui.menu.hidden && !e.composedPath().includes(ui.host)) hideMenu(); }, true);
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && voice) { e.preventDefault(); e.stopPropagation(); stopVoice(); return; }
     if (e.key === "Escape" && ui && (!ui.menu.hidden || cardOpen())) { e.preventDefault(); e.stopPropagation(); hideMenu(); cancel(); }
   }, true);
 
@@ -470,7 +478,11 @@
   function showMenu() {
     ensureUi();
     const m = ui.menu;
-    m.replaceChildren(h("div", { class: "head" }, "REWRITE AS"));
+    m.replaceChildren(
+      h("button", { class: "row voice-row", role: "menuitem", title: "Speak Persian or English: the words are typed into the box (Alt+Shift+V)", onclick: () => { hideMenu(); toggleVoice(); } },
+        h("span", { class: "letter" }, icon(MIC, 14)), h("span", { class: "two" }, h("span", {}, "Voice typing"), h("small", {}, "Persian or English · Gemini"))),
+      h("div", { class: "sep" }),
+      h("div", { class: "head" }, "REWRITE AS"));
     for (const t of tones) {
       m.append(h("button", { class: `row${t.id === tone ? " sel" : ""}`, role: "menuitem", onclick: () => {
         hideMenu();
@@ -580,6 +592,7 @@
   }
 
   function setBubble(state) {
+    ui.bubble.classList.toggle("rec", state === "rec");
     ui.bubble.classList.toggle("working", state === "working");
     ui.bubble.classList.toggle("error", state === "error");
     ui.bubble.classList.toggle("on", state !== "idle");
@@ -1018,6 +1031,135 @@
     ui.pageSwap.textContent = page.showing === "fa" ? "متن اصلی" : "فارسی";
   }
 
+  // ---------- voice typing (Gemini live speech-to-text; bubble menu or Alt+Shift+V) ----------
+  // The words are typed into the text box as they're recognised. Stop: the bubble, Esc, Alt+Shift+V, or
+  // leaving the box. Nothing else happens after that: the bubble rewrites it when you want.
+
+  let voice = null; // {el, port, stream, ctx, proc, finals: [], interim, shown, lead, start, stopping}
+
+  async function toggleVoice() {
+    if (voice) return stopVoice();
+    const el = editableFrom(deepActive()) || (field?.isConnected ? field : null);
+    if (!el) { ensureUi(); shake(); return; }
+    ensureUi(); hideMenu(); cancel();
+    field = el;
+    const v = voice = { el, finals: [], interim: "", shown: "", stopping: false };
+    // Start at the cursor; a space first when it follows a word.
+    if (isValueField(el)) {
+      v.start = el.selectionEnd ?? el.value.length;
+      v.lead = /\S$/.test(el.value.slice(0, v.start)) ? " " : "";
+    } else {
+      const sel = el.getRootNode().getSelection?.() || window.getSelection();
+      const r = sel.rangeCount ? sel.getRangeAt(0) : null;
+      let before = "";
+      if (r && el.contains(r.startContainer)) { const pre = document.createRange(); pre.selectNodeContents(el); pre.setEnd(r.startContainer, r.startOffset); before = pre.toString(); }
+      v.lead = /\S$/.test(before) ? " " : "";
+    }
+    setBubble("rec");
+    schedule();
+    try { v.port = chrome.runtime.connect({ name: "voice" }); }
+    catch { return voiceFail("Tone Fixer was updated. Reload this page to use it."); }
+    v.port.onMessage.addListener((m) => {
+      if (voice !== v) return;
+      if (m.type === "interim") { v.interim = m.text; showVoice(); }
+      else if (m.type === "final") { if (m.text.trim()) v.finals.push(m.text.trim()); v.interim = ""; showVoice(); }
+      else if (m.type === "error") voiceFail(m.error, m.settings);
+      else if (m.type === "end") endVoice();
+    });
+    v.port.onDisconnect.addListener(() => { if (voice === v) endVoice(); });
+    try {
+      v.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    } catch (e) {
+      return voiceFail(e?.name === "NotAllowedError" ? "The microphone is blocked for this site: allow it (the icon in the address bar), then try again." : "No microphone found.");
+    }
+    if (voice !== v) { v.stream.getTracks().forEach((t) => t.stop()); return; }
+    // 16 kHz 16-bit mono PCM in ~0.1 s pieces. The context runs at the device's rate (Firefox can't mix
+    // rates), so the samples are averaged down here.
+    v.ctx = new AudioContext();
+    const src = v.ctx.createMediaStreamSource(v.stream);
+    v.proc = v.ctx.createScriptProcessor(4096, 1, 1);
+    const ratio = v.ctx.sampleRate / 16000;
+    v.proc.onaudioprocess = (e) => {
+      if (voice !== v || v.stopping) return;
+      const f = e.inputBuffer.getChannelData(0), n = Math.floor(f.length / ratio), out = new Int16Array(n);
+      for (let i = 0; i < n; i++) {
+        let sum = 0, a = Math.floor(i * ratio), b = Math.min(f.length, Math.floor((i + 1) * ratio));
+        for (let j = a; j < b; j++) sum += f[j];
+        const x = Math.max(-1, Math.min(1, sum / Math.max(1, b - a)));
+        out[i] = x < 0 ? x * 0x8000 : x * 0x7fff;
+      }
+      const bytes = new Uint8Array(out.buffer); let bin = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      try { v.port.postMessage({ audio: btoa(bin) }); } catch { /* gone */ }
+    };
+    src.connect(v.proc); v.proc.connect(v.ctx.destination);
+  }
+
+  /** Put the words so far into the box: only the part that changed is replaced (Ctrl+Z still works in editors). */
+  function showVoice() {
+    const v = voice, el = v.el;
+    if (!el.isConnected) return stopVoice();
+    const words = [...v.finals, v.interim.trim()].filter(Boolean).join(" ");
+    const next = words ? v.lead + words : "";
+    if (next === v.shown) return;
+    if (isValueField(el)) {
+      const full = el.value, newFull = full.slice(0, v.start) + next + full.slice(v.start + v.shown.length);
+      Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set.call(el, newFull);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.setSelectionRange(v.start + next.length, v.start + next.length);
+    } else {
+      if (editableFrom(deepActive()) !== el) el.focus({ preventScroll: true });
+      let i = 0;
+      while (i < v.shown.length && i < next.length && v.shown[i] === next[i]) i++;
+      for (let k = v.shown.length - i; k > 0; k--) document.execCommand("delete");
+      if (next.length > i) document.execCommand("insertText", false, next.slice(i));
+    }
+    v.shown = next;
+    schedule();
+  }
+
+  function stopVoice() {
+    const v = voice;
+    if (!v || v.stopping) return;
+    v.stopping = true;
+    releaseMic(v);
+    try { v.port?.postMessage({ stop: true }); } catch { endVoice(); }
+    setBubble("working"); // the last words are still on their way
+  }
+
+  function releaseMic(v) {
+    try { v.proc?.disconnect(); } catch { /* done */ }
+    v.stream?.getTracks().forEach((t) => t.stop());
+    v.ctx?.close().catch(() => {});
+  }
+
+  function endVoice() {
+    const v = voice;
+    if (!v) return;
+    voice = null;
+    releaseMic(v);
+    try { v.port?.disconnect(); } catch { /* gone */ }
+    if (ui) setBubble("idle");
+    schedule();
+  }
+
+  function voiceFail(msg, settingsLink) {
+    endVoice();
+    ensureUi();
+    mode = "note";
+    ui.card.classList.remove("fa");
+    ui.title.textContent = "Voice typing";
+    ui.tag.hidden = true; ui.model.hidden = true;
+    ui.ok.hidden = true; ui.again.hidden = true; ui.copyBtn.hidden = true;
+    ui.chips.replaceChildren();
+    result = ""; streaming = false;
+    renderBody();
+    if (ui.card.hidden) { ui.card.hidden = false; chooseCardSide(); }
+    status(msg, true, settingsLink);
+    placeCard();
+    setBubble("error");
+  }
+
   // ---------- keyboard shortcut (Alt+Shift+F, sent by the service worker) ----------
 
   try {
@@ -1039,6 +1181,7 @@
         reply({ on: page.on });
         return;
       }
+      if (m.type === "voice") { if (document.hasFocus() && enabled) toggleVoice(); return; }
       if (m.type !== "run" || !document.hasFocus() || !enabled) return;
       if (cardOpen() && !streaming && result.trim()) { apply(); return; } // second press = ✓
       const el = editableFrom(deepActive());

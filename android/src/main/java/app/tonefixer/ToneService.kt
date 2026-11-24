@@ -93,6 +93,51 @@ class ToneService : AccessibilityService(), Overlay.Callbacks {
 
     // ---------- translate to Persian ----------
 
+    // ---------- voice typing ----------
+    // The bubble menu opens VoiceActivity (a small panel at the bottom: being on screen is what lets Android
+    // give it the microphone). It sends the words so far here, and they're written into the text box.
+
+    private class VoiceTarget(val node: AccessibilityNodeInfo, val before: String, val after: String, val lead: String)
+    private var voiceTarget: VoiceTarget? = null
+
+    override fun onVoice() {
+        if (prefs.key("gemini") == null) {
+            overlay.fail("Voice typing uses Google Gemini: add a Gemini API key in Tone Fixer.", settingsLink = true); return
+        }
+        val n = findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+        if (n == null || !n.isEditable || n.isPassword) { overlay.shake(); return }
+        val full = if (n.isShowingHintText) "" else n.text?.toString().orEmpty()
+        val cursor = n.textSelectionEnd.takeIf { it in 0..full.length } ?: full.length
+        val before = full.substring(0, cursor)
+        voiceTarget = VoiceTarget(n, before, full.substring(cursor), if (before.isNotEmpty() && !before.last().isWhitespace()) " " else "")
+        overlay.closeCard()
+        overlay.setState(Overlay.State.WORKING)
+        startActivity(Intent(this, VoiceActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION))
+    }
+
+    /** The words so far (from VoiceActivity): the box becomes before + words + after, cursor after the words. */
+    fun voiceText(words: String) = main.post {
+        val t = voiceTarget ?: return@post
+        val next = if (words.isBlank()) "" else t.lead + words
+        val n = t.node
+        if (!n.refresh()) return@post
+        n.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
+            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, t.before + next + t.after)
+        })
+        val c = t.before.length + next.length
+        n.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, Bundle().apply {
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, c)
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, c)
+        })
+    }
+
+    /** VoiceActivity closed. [error] = shown in the card. */
+    fun voiceDone(error: String?) = main.post {
+        voiceTarget = null
+        if (error != null) overlay.fail(error, settingsLink = "Tone Fixer" in error || "key" in error)
+        else overlay.setState(Overlay.State.IDLE)
+    }
+
     override fun onTranslate(screen: Boolean) {
         if (screen) {
             val t = readScreen()

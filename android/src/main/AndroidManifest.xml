@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- The "Uninstall Tone Fixer" button in Settings opens Android's uninstall prompt. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- Voice typing (bubble menu → Voice typing): asked the first time it's used. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:label="Tone Fixer"
@@ -46,6 +48,15 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+
+        <!-- Voice typing panel: a small card at the bottom while you speak (its own task, so the app behind stays put). -->
+        <activity
+            android:name=".VoiceActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
 
         <service
             android:name=".ToneService"
