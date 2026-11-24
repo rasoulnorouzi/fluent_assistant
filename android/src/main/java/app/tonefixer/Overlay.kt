@@ -51,6 +51,8 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
         fun onPickTranslateMode(id: String)
         /** ↻ in the card: a slightly different version of the same rewrite. */
         fun onAnother()
+        /** Bubble menu: voice typing into the text box (Gemini). */
+        fun onVoice()
     }
 
     /** One model the user can switch to: only services with a saved key are offered. */
@@ -303,6 +305,8 @@ class Overlay(private val ctx: Context, private val prefs: Prefs, private val cb
             background = Ui.round(p.card, dp(22).toFloat())
             elevation = dp(10).toFloat()
             setPadding(dp(8), dp(8), dp(8), dp(8))
+            addView(actionRow("🎤", "Voice typing", "Speak Persian or English: the words are typed into the box") { cb.onVoice() })
+            addView(View(ctx).apply { setBackgroundColor(p.line) }, LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(10), dp(4), dp(10), dp(4)) })
             addView(TextView(ctx).apply {
                 text = "REWRITE AS"; textSize = 11f; letterSpacing = 0.08f; typeface = Typeface.DEFAULT_BOLD
                 setTextColor(p.muted); setPadding(dp(10), dp(4), dp(10), dp(6))

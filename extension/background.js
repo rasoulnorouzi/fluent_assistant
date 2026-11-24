@@ -118,6 +118,54 @@ async function translatePieces(cfg, s, pieces) {
   return items ? { items } : { retry: true };
 }
 
+// ---------- voice typing (port "voice"): PCM audio in, live transcript out ----------
+// Always Google Gemini (its live speech-to-text understands Persian), whatever service rewrites the text.
+// Page → {audio: base64 16 kHz PCM} … {stop: true}. Here → {type: "ready"|"interim"|"final"|"end"|"error"}.
+
+const VOICE = { model: "gemini-3.5-transcribe-live",
+  url: "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent" };
+
+chrome.runtime.onConnect.addListener(async (port) => {
+  if (port.name !== "voice") return;
+  const send = (m) => { try { port.postMessage(m); } catch { /* page closed */ } };
+  let ws = null, ready = false, ended = false, endTimer = 0;
+  const queue = [];
+  const finish = (m) => { if (ended) return; ended = true; clearTimeout(endTimer); send(m || { type: "end" }); try { ws?.close(); } catch { /* closed */ } };
+  port.onDisconnect.addListener(() => { ended = true; try { ws?.close(); } catch { /* closed */ } });
+  port.onMessage.addListener((m) => {
+    if (m.audio) {
+      const msg = JSON.stringify({ realtimeInput: { audio: { data: m.audio, mimeType: "audio/pcm;rate=16000" } } });
+      if (ready) ws.send(msg); else if (queue.length < 200) queue.push(msg);
+    } else if (m.stop) {
+      if (ready) ws.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
+      endTimer = setTimeout(() => finish(), ready ? 3000 : 0); // the last words arrive just after the end
+    }
+  });
+  const cfg = await config();
+  const s = await settings();
+  const key = cleanKey(s.keys.gemini);
+  if (!key) return finish({ type: "error", error: "Voice typing uses Google Gemini: add a Gemini API key in Tone Fixer settings.", settings: true });
+  const v = { ...VOICE, ...(cfg.providers.providers.gemini?.voice || {}) };
+  ws = new WebSocket(`${v.url}?key=${encodeURIComponent(key)}`);
+  ws.binaryType = "arraybuffer";
+  ws.onopen = () => ws.send(JSON.stringify({ setup: { model: `models/${v.model}`, inputAudioTranscription: {} } }));
+  ws.onmessage = (e) => {
+    let m;
+    try { m = JSON.parse(typeof e.data === "string" ? e.data : new TextDecoder().decode(e.data)); } catch { return; }
+    if (m.setupComplete) { ready = true; send({ type: "ready" }); for (const q of queue.splice(0)) ws.send(q); return; }
+    const c = m.serverContent || {};
+    if (c.interimInputTranscription) send({ type: "interim", text: c.interimInputTranscription.text || "" });
+    if (c.inputTranscription) send({ type: "final", text: c.inputTranscription.text || "" });
+    if (c.generationComplete && endTimer) finish();
+  };
+  ws.onerror = () => {};
+  ws.onclose = (e) => {
+    if (ended) return;
+    const why = e.reason || (e.code === 1006 ? "No connection." : `Closed (${e.code}).`);
+    finish(ready && e.code === 1000 ? { type: "end" } : { type: "error", error: /key/i.test(why) ? "Gemini didn't accept the API key. Check it in Tone Fixer settings." : `Voice typing stopped: ${why}`, settings: /key/i.test(why) });
+  };
+});
+
 // ---------- small requests from the page and the options page ----------
 
 let lastWarm = { url: "", at: 0 };
@@ -165,6 +213,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
 // Toolbar icon → popup.html (on/off, this site, translate the page). Keyboard shortcut → rewrite.
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command === "rewrite" && tab?.id != null) chrome.tabs.sendMessage(tab.id, { type: "run" }).catch(() => {});
+  if (command === "voice" && tab?.id != null) chrome.tabs.sendMessage(tab.id, { type: "voice" }).catch(() => {});
 });
 // Right-click on selected text → «ترجمه به فارسی» (hidden while Tone Fixer is switched off).
 async function setupMenu() {

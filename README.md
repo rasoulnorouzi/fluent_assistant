@@ -82,6 +82,11 @@ translates the page in place (a small bar at the top: متن اصلی / ✕ brin
 prompts ›** opens the prompts: the writing prompt, each tone's style and the translation prompts. Save uses your
 version; **Reset to built-in** brings the original back.
 
+**Voice typing (Persian or English):** bubble menu → **Voice typing**, or **Alt+Shift+V**. Speak, and the
+words appear in the text box as you talk; click the bubble (or Esc / Alt+Shift+V) to stop. Then click the
+bubble as usual to rewrite it in a tone. It always uses Google Gemini's live speech-to-text (a Gemini key is
+needed), even when Claude does the rewriting. The browser asks once per site for the microphone.
+
 **Translate to Persian:** select text on a page → right-click → **ترجمه به فارسی**: the selected
 words turn into fluent Persian right there (Vazirmatn font, right-to-left when most of the paragraph
 is Persian). Right-click anywhere → **ترجمه‌ی کل صفحه به فارسی** does the whole page as you scroll.
@@ -123,6 +128,13 @@ The same extension, built for Firefox 140 or newer: `extension/pack.sh` also mak
 
 Everything works as in Chrome (bubble, tones, toolbar popup, right-click «ترجمه به فارسی», page
 translation, settings). New versions don't announce themselves in Firefox yet: download the new `.xpi`.
+
+## Voice typing on Android
+
+Hold the bubble → **🎤 Voice typing**. A small panel opens at the bottom ("Listening…"); speak Persian or
+English and the words are typed into the box you were in. **Stop** (or a tap outside the panel) ends it.
+Then tap the bubble to rewrite it as usual. The first time, Android asks for the microphone. Uses your
+Gemini key (Settings → add a Gemini key even if you rewrite with Claude).
 
 ## Android updates (inside the app)
 

@@ -29,6 +29,9 @@ object Llm {
         val providers: Map<String, Provider>, val defaultProvider: String, val maxTokens: JSONObject,
         /** Translate to Persian (tones.json → translate): its own instructions and modes (روان / رسمی). */
         val translateSystem: String = "", val translateModes: List<Tone> = emptyList(), val translateDefault: String = "",
+        /** Voice typing: Gemini's live speech-to-text (providers.json → gemini.voice), whatever service rewrites. */
+        val voiceModel: String = "gemini-3.5-transcribe-live",
+        val voiceUrl: String = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent",
     ) {
         fun tone(id: String?) = tones.firstOrNull { it.id == id } ?: tones.first { it.id == defaultTone }
         fun translateMode(id: String?) = translateModes.firstOrNull { it.id == id }
@@ -68,9 +71,14 @@ object Llm {
         val trModes = tr?.optJSONArray("modes")?.objects()?.map {
             Tone(it.getString("id"), it.getString("label"), it.optString("letter"), it.getString("style"))
         }.orEmpty()
+        val voice = providersObj.optJSONObject("gemini")?.optJSONObject("voice")
         return Config(t.getString("system"), tones, t.getString("defaultTone"), t.optString("userTemplate", "{text}"), providers,
             p.getString("defaultProvider"), p.getJSONObject("maxTokens"),
-            tr?.optString("system").orEmpty(), trModes, tr?.optString("defaultMode").orEmpty())
+            tr?.optString("system").orEmpty(), trModes, tr?.optString("defaultMode").orEmpty()).let { c ->
+            if (voice == null) c else Config(c.system, c.tones, c.defaultTone, c.userTemplate, c.providers, c.defaultProvider, c.maxTokens,
+                c.translateSystem, c.translateModes, c.translateDefault,
+                voice.optString("model").ifEmpty { c.voiceModel }, voice.optString("url").ifEmpty { c.voiceUrl })
+        }
     }
 
     // ---------- Prompts the user edited (Settings → Advanced: prompts) ----------
@@ -90,6 +98,7 @@ object Llm {
             cfg.tones.map { t -> o["tone:${t.id}"]?.let { Tone(t.id, t.label, t.letter, it) } ?: t },
             cfg.defaultTone, cfg.userTemplate, cfg.providers, cfg.defaultProvider, cfg.maxTokens,
             o["translate"]?.let(::withStyle) ?: cfg.translateSystem, cfg.translateModes, cfg.translateDefault,
+            cfg.voiceModel, cfg.voiceUrl,
         )
     }
 

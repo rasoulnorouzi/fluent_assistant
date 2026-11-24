@@ -192,7 +192,7 @@ function renderUpdate(info) {
     $("newVersion").textContent = latest.version;
     $("newNotes").textContent = latest.notes || "";
     // Firefox gets the .xpi with the same version (published next to the Chrome zip).
-    const file = typeof browser !== "undefined" ? `tone-fixer-firefox-${latest.version}.xpi` : latest.zip;
+    const file = chrome.runtime.getURL("").startsWith("moz-extension:") ? `tone-fixer-firefox-${latest.version}.xpi` : latest.zip;
     $("download").href = new URL(file, "https://raw.githubusercontent.com/rasoulnorouzi/fluent_assistant/updates/extension/").href;
   }
   $("updateState").textContent = fresh ? "" : lastCheck
